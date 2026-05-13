@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Hash,
   Home,
+  Images,
   Minus,
   Plus,
   Settings as SettingsIcon,
@@ -18,6 +19,7 @@ const todayKey = new Date().toISOString().slice(0, 10);
 const tabs = [
   { id: 'habits', label: 'Habits', icon: Home },
   { id: 'progress', label: 'Progress', icon: BarChart3 },
+  { id: 'gallery', label: 'Gallery', icon: Images },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 const typeLabels = {
@@ -262,6 +264,8 @@ function HabitApp({
 
       {!error && !loading && activeTab === 'progress' && <ProgressTab progressLog={progressLog} />}
 
+      {!error && !loading && activeTab === 'gallery' && <GalleryTab entriesByHabit={entriesByHabit} habits={habits} />}
+
       {!error && !loading && activeTab === 'settings' && (
         <SettingsTab
           onClearPhotos={onClearPhotos}
@@ -277,26 +281,26 @@ function HabitApp({
 
 function HabitsTab({ entriesByHabit, habits, onAddHabit, onArchiveHabit, onNumberHabit, onPhotoChange, onToggleClock }) {
   return (
-    <div className="habit-grid">
-      <button className="add-habit-card" type="button" onClick={onAddHabit}>
-        <span className="type-icon">
+    <div className="habits-tab tab-panel">
+      <div className="habits-toolbar">
+        <button className="add-habit-button" type="button" onClick={onAddHabit} aria-label="Add habit" title="Add habit">
           <Plus size={18} strokeWidth={1.8} />
-        </span>
-        <strong>Add habit</strong>
-        <small>Clock-in, number, or photo comparator</small>
-      </button>
+        </button>
+      </div>
 
-      {habits.map((habit) => (
-        <HabitTile
-          entries={entriesByHabit.get(habit.id) ?? []}
-          habit={habit}
-          key={habit.id}
-          onArchiveHabit={onArchiveHabit}
-          onNumberHabit={onNumberHabit}
-          onPhotoChange={onPhotoChange}
-          onToggleClock={onToggleClock}
-        />
-      ))}
+      <div className="habit-grid">
+        {habits.map((habit) => (
+          <HabitTile
+            entries={entriesByHabit.get(habit.id) ?? []}
+            habit={habit}
+            key={habit.id}
+            onArchiveHabit={onArchiveHabit}
+            onNumberHabit={onNumberHabit}
+            onPhotoChange={onPhotoChange}
+            onToggleClock={onToggleClock}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -317,6 +321,17 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
 
   const isClock = habit.type === 'clock';
   const complete = isEntryComplete(todayEntry, habit.type);
+  const runPrimaryAction = () => {
+    if (isClock) {
+      onToggleClock(habit);
+      return;
+    }
+    onNumberHabit(habit);
+  };
+  const archiveHabit = (event) => {
+    event.stopPropagation();
+    onArchiveHabit(habit.id);
+  };
   const meta = isClock
     ? complete
       ? 'Completed today'
@@ -328,11 +343,17 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
       : `${todayEntry.value} logged today`;
 
   return (
-    <article className="habit-card animated-card">
+    <article
+      className={complete ? 'habit-card action-card animated-card is-complete-card' : 'habit-card action-card animated-card'}
+      onClick={runPrimaryAction}
+      onKeyDown={(event) => activateOnKeyboard(event, runPrimaryAction)}
+      role="button"
+      tabIndex={0}
+    >
       <div className="card-topline">
         <span className="type-icon">{isClock ? <Check size={18} strokeWidth={1.8} /> : <Hash size={18} strokeWidth={1.8} />}</span>
         <span>{typeLabels[habit.type]}</span>
-        <button className="remove-button" type="button" onClick={() => onArchiveHabit(habit.id)} aria-label={`Archive ${habit.name}`}>
+        <button className="remove-button" type="button" onClick={archiveHabit} aria-label={`Archive ${habit.name}`}>
           <X size={15} strokeWidth={1.8} />
         </button>
       </div>
@@ -341,15 +362,15 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
         <p>{meta}</p>
       </div>
       {isClock ? (
-        <button className={complete ? 'plain-button is-complete' : 'plain-button'} type="button" onClick={() => onToggleClock(habit)}>
+        <span className={complete ? 'plain-button is-complete' : 'plain-button'}>
           {complete ? 'Clocked in' : 'Clock in'}
           <Check size={17} strokeWidth={1.8} />
-        </button>
+        </span>
       ) : (
-        <button className="plain-button" type="button" onClick={() => onNumberHabit(habit)}>
+        <span className="plain-button">
           {todayEntry?.value == null ? 'Enter number' : 'Update'}
           <Hash size={17} strokeWidth={1.8} />
-        </button>
+        </span>
       )}
     </article>
   );
@@ -408,6 +429,83 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function GalleryTab({ entriesByHabit, habits }) {
+  const photoHabits = habits
+    .filter((habit) => habit.type === 'photo')
+    .map((habit) => ({
+      habit,
+      entries: (entriesByHabit.get(habit.id) ?? [])
+        .filter((entry) => entry.photoData)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }));
+  const totalPhotos = photoHabits.reduce((count, item) => count + item.entries.length, 0);
+
+  if (!photoHabits.length) {
+    return (
+      <div className="gallery-tab tab-panel">
+        <section className="gallery-empty">
+          <p className="eyebrow">Gallery</p>
+          <h2>No comparators yet</h2>
+          <p>Add a photo habit from the home tab to start a visual progress log.</p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="gallery-tab tab-panel">
+      <section className="gallery-hero">
+        <div>
+          <p className="eyebrow">Gallery</p>
+          <h2>{totalPhotos ? `${totalPhotos} saved photo${totalPhotos === 1 ? '' : 's'}` : 'No photos yet'}</h2>
+        </div>
+      </section>
+
+      {photoHabits.map(({ entries, habit }) => (
+        <section className="gallery-section" key={habit.id}>
+          <div className="gallery-header">
+            <div>
+              <h3>{habit.name}</h3>
+              <p>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'} logged` : 'Waiting for day 1'}</p>
+            </div>
+          </div>
+
+          {entries.length ? (
+            <>
+              <div className="gallery-comparison">
+                <GalleryPhoto entry={entries[0]} label="Day 1" />
+                <GalleryPhoto entry={entries.at(-1)} label="Latest" />
+              </div>
+
+              <div className="gallery-grid" aria-label={`${habit.name} photo history`}>
+                {entries.map((entry) => (
+                  <GalleryPhoto entry={entry} key={`${habit.id}-${entry.date}`} label={formatShortDate(entry.date)} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="gallery-empty is-compact">
+              <p>No pictures saved for this comparator.</p>
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function GalleryPhoto({ entry, label }) {
+  return (
+    <figure className="gallery-photo">
+      <img src={entry.photoData} alt={`${label} comparator`} />
+      <figcaption>
+        <span>{label}</span>
+        <small>{formatShortDate(entry.date)}</small>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -590,6 +688,7 @@ function AddHabitModal({ onClose, onSave }) {
 }
 
 function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
+  const inputRef = useRef(null);
   const photoEntries = entries.filter((entry) => entry.photoData).sort((a, b) => a.date.localeCompare(b.date));
   const firstPhoto = photoEntries[0];
   const latestPhoto = photoEntries.at(-1);
@@ -598,15 +697,26 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
     : photoEntries.length === 1
       ? 'Day 1 started'
       : `${photoEntries.length} photos logged`;
+  const openFilePicker = () => inputRef.current?.click();
+  const archiveHabit = (event) => {
+    event.stopPropagation();
+    onArchiveHabit(habit.id);
+  };
 
   return (
-    <article className="habit-card photo-card animated-card">
+    <article
+      className="habit-card photo-card action-card animated-card"
+      onClick={openFilePicker}
+      onKeyDown={(event) => activateOnKeyboard(event, openFilePicker)}
+      role="button"
+      tabIndex={0}
+    >
       <div className="card-topline">
         <span className="type-icon">
           <Camera size={18} strokeWidth={1.8} />
         </span>
         <span>Comparator</span>
-        <button className="remove-button" type="button" onClick={() => onArchiveHabit(habit.id)} aria-label={`Archive ${habit.name}`}>
+        <button className="remove-button" type="button" onClick={archiveHabit} aria-label={`Archive ${habit.name}`}>
           <X size={15} strokeWidth={1.8} />
         </button>
       </div>
@@ -628,11 +738,19 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
         <PhotoFrame image={latestPhoto?.photoData} label="Today" />
       </div>
 
-      <label className="plain-button file-button">
+      <span className="plain-button file-button">
         Add today&apos;s photo
         <Camera size={17} strokeWidth={1.8} />
-        <input accept="image/*" capture="environment" type="file" onChange={(event) => onPhotoChange(habit, event)} />
-      </label>
+      </span>
+      <input
+        accept="image/*"
+        capture="environment"
+        className="photo-input"
+        ref={inputRef}
+        type="file"
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => onPhotoChange(habit, event)}
+      />
     </article>
   );
 }
@@ -708,6 +826,17 @@ function countPhotoEntries(entriesByHabit, habits) {
   return habits
     .filter((habit) => habit.type === 'photo')
     .reduce((count, habit) => count + (entriesByHabit.get(habit.id) ?? []).filter((entry) => entry.photoData).length, 0);
+}
+
+function activateOnKeyboard(event, action) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  if (event.target !== event.currentTarget && event.target.closest('button, input, select, textarea, a')) return;
+  event.preventDefault();
+  action();
+}
+
+function formatShortDate(dateKey) {
+  return new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function fileToCompressedDataUrl(file) {
@@ -848,7 +977,7 @@ function BambooScene({ variant = 'splash' }) {
         const time = performance.now() * 0.001;
 
         group.rotation.y = Math.sin(time * 0.34) * 0.06;
-        group.position.y = Math.sin(time * 0.5) * 0.025 - 0.32;
+        group.position.y = Math.sin(time * 0.5) * 0.025 - 0.18;
 
         renderer.render(scene, camera);
       };
