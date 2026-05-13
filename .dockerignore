@@ -1,0 +1,7 @@
+node_modules
+dist
+verification
+vite-dev*.log
+npm-debug.log
+.git
+.DS_Store

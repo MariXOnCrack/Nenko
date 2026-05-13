@@ -1,0 +1,35 @@
+services:
+  nenko-db:
+    image: postgres:16-alpine
+    container_name: nenko-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nenko
+      POSTGRES_USER: nenko
+      POSTGRES_PASSWORD: nenko_dev_password
+    ports:
+      - "55437:5432"
+    volumes:
+      - nenko-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nenko -d nenko"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nenko-app:
+    build: .
+    container_name: nenko-app
+    restart: unless-stopped
+    depends_on:
+      nenko-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 7319
+      DATABASE_URL: postgres://nenko:nenko_dev_password@nenko-db:5432/nenko
+    ports:
+      - "7319:7319"
+
+volumes:
+  nenko-postgres-data:

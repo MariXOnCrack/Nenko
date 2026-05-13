@@ -1,0 +1,299 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap');
+
+  .spec-root {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-weight: 300;
+  }
+
+  .spec-root.light {
+    --nk-bg:      #f5f3ee;
+    --nk-surface: #ffffff;
+    --nk-raised:  #eceae4;
+    --nk-ink:     #1a1a18;
+    --nk-ash:     #5c5c58;
+    --nk-mist:    #a8a89e;
+    --nk-stone:   #d8d6d0;
+    --nk-accent:  #2d4a3e;
+    --nk-sage:    #7a8c70;
+    --nk-warm:    #c4a882;
+    --nk-danger:  #8b4a42;
+    --nk-danger-b:#c4857d;
+    --nk-sem-ok-bg: #e8f0e6; --nk-sem-ok-tx: #2d4a3e;
+    --nk-sem-miss-bg: #f5ede6; --nk-sem-miss-tx: #8b5e3c;
+    --nk-sem-pend-bg: #edeae6; --nk-sem-pend-tx: #5c5c58;
+    --nk-sem-str-bg: #e6ebe8; --nk-sem-str-tx: #2d4a3e;
+  }
+
+  .spec-root.dark {
+    --nk-bg:      #141412;
+    --nk-surface: #1e1d1b;
+    --nk-raised:  #252420;
+    --nk-ink:     #e8e6df;
+    --nk-ash:     #a8a49c;
+    --nk-mist:    #5c5a54;
+    --nk-stone:   #333128;
+    --nk-accent:  #6a9e8a;
+    --nk-sage:    #8fa882;
+    --nk-warm:    #c4a882;
+    --nk-danger:  #c4736a;
+    --nk-danger-b:#8b4a42;
+    --nk-sem-ok-bg: #1a2e28; --nk-sem-ok-tx: #7abfa8;
+    --nk-sem-miss-bg: #2e1e14; --nk-sem-miss-tx: #c49070;
+    --nk-sem-pend-bg: #252420; --nk-sem-pend-tx: #a8a49c;
+    --nk-sem-str-bg: #1a2820; --nk-sem-str-tx: #7abfa8;
+  }
+
+  .spec-root { background: var(--nk-bg); color: var(--nk-ink); padding: 2.5rem 2rem; }
+
+  .toggle-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
+  .app-header { display: flex; align-items: baseline; gap: 1rem; }
+  .app-name { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 300; letter-spacing: 0.12em; color: var(--nk-ink); margin: 0; }
+  .app-sub { font-size: 12px; letter-spacing: 0.2em; color: var(--nk-mist); text-transform: uppercase; }
+
+  .mode-toggle {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--nk-ash);
+    background: var(--nk-raised); border: 0.5px solid var(--nk-stone);
+    border-radius: 2px; padding: 7px 14px; font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+
+  .divider { width: 100%; height: 0.5px; background: var(--nk-stone); margin: 1.75rem 0; }
+  .section-label { font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--nk-mist); margin-bottom: 1.25rem; }
+
+  .palette-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 2rem; }
+  .swatch-col { display: flex; flex-direction: column; gap: 4px; }
+  .swatch { height: 48px; border-radius: 4px; }
+  .swatch-label { font-size: 9px; letter-spacing: 0.1em; color: var(--nk-ash); text-align: center; }
+
+  .type-row { display: grid; grid-template-columns: 120px 1fr 80px 80px; align-items: baseline; gap: 1rem; border-bottom: 0.5px solid var(--nk-stone); padding-bottom: 1rem; margin-bottom: 1.25rem; }
+  .type-meta { font-size: 10px; letter-spacing: 0.15em; color: var(--nk-mist); text-transform: uppercase; }
+  .type-spec { font-size: 10px; color: var(--nk-mist); text-align: right; }
+  .t-display { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; letter-spacing: 0.08em; color: var(--nk-ink); }
+  .t-heading { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400; letter-spacing: 0.06em; color: var(--nk-ink); }
+  .t-subheading { font-size: 13px; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; color: var(--nk-ash); }
+  .t-body { font-size: 15px; font-weight: 300; line-height: 1.8; color: var(--nk-ink); }
+  .t-caption { font-size: 11px; font-weight: 300; letter-spacing: 0.1em; color: var(--nk-ash); }
+  .t-label { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--nk-mist); }
+
+  .btn-primary { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; background: var(--nk-accent); color: var(--nk-bg); border: none; padding: 12px 28px; border-radius: 2px; cursor: pointer; }
+  .btn-secondary { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; background: transparent; color: var(--nk-ink); border: 0.5px solid var(--nk-ash); padding: 12px 28px; border-radius: 2px; cursor: pointer; }
+  .btn-ghost { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; background: transparent; color: var(--nk-ash); border: none; padding: 12px 28px; cursor: pointer; }
+  .btn-danger { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; background: transparent; color: var(--nk-danger); border: 0.5px solid var(--nk-danger-b); padding: 12px 28px; border-radius: 2px; cursor: pointer; }
+  .btn-icon { width: 40px; height: 40px; background: var(--nk-raised); border: 0.5px solid var(--nk-stone); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--nk-ash); font-size: 16px; }
+  .btn-icon-accent { width: 40px; height: 40px; background: var(--nk-accent); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--nk-bg); font-size: 16px; }
+  .btn-label { font-size: 9px; letter-spacing: 0.15em; color: var(--nk-mist); text-transform: uppercase; text-align: center; margin-top: 4px; }
+  .btn-item { display: flex; flex-direction: column; align-items: center; }
+  .button-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 0.75rem; }
+
+  .nk-input { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; font-weight: 300; background: var(--nk-surface); border: 0.5px solid var(--nk-stone); border-radius: 2px; padding: 10px 14px; color: var(--nk-ink); outline: none; width: 300px; letter-spacing: 0.04em; }
+  .nk-input::placeholder { color: var(--nk-mist); }
+  .nk-input-underline { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; font-weight: 300; background: transparent; border: none; border-bottom: 0.5px solid var(--nk-ash); padding: 8px 2px; color: var(--nk-ink); outline: none; width: 300px; letter-spacing: 0.04em; }
+
+  .habit-card { background: var(--nk-surface); border: 0.5px solid var(--nk-stone); border-radius: 2px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; width: 340px; margin-bottom: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nk-stone); }
+  .dot.filled { background: var(--nk-accent); }
+  .dot.today { background: var(--nk-sage); }
+  .habit-name { font-size: 13px; letter-spacing: 0.1em; color: var(--nk-ink); font-weight: 300; }
+  .habit-streak { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--nk-accent); }
+
+  .spacing-row { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 1rem; }
+  .space-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .space-vis { background: var(--nk-stone); width: 40px; border-radius: 2px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+</style>
+
+<div class="spec-root light" id="root">
+  <h2 class="sr-only">Nenko design spec sheet with light and dark mode toggle</h2>
+
+  <div class="toggle-bar">
+    <div class="app-header">
+      <p class="app-name">Nenko</p>
+      <span class="app-sub">Design Specsheet v1.0</span>
+    </div>
+    <button class="mode-toggle" id="modeBtn" onclick="toggleMode()" aria-label="Toggle dark mode">
+      <i class="ti ti-moon" id="modeIcon" aria-hidden="true"></i>
+      <span id="modeLabel">Dark mode</span>
+    </button>
+  </div>
+  <p style="font-size:12px; letter-spacing:0.1em; color:var(--nk-mist); margin:0.25rem 0 0;">日々の実践 — Daily Practice</p>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Color Palette</p>
+  <div class="palette-row" id="palette"></div>
+
+  <div style="display:flex; gap:8px; align-items:center; margin-bottom:2rem; flex-wrap:wrap;">
+    <span style="font-size:11px; letter-spacing:0.08em; color:var(--nk-ash);">Semantic:</span>
+    <span style="font-size:11px; padding:4px 10px; background:var(--nk-sem-ok-bg); color:var(--nk-sem-ok-tx); border-radius:2px; letter-spacing:0.08em;">Complete</span>
+    <span style="font-size:11px; padding:4px 10px; background:var(--nk-sem-miss-bg); color:var(--nk-sem-miss-tx); border-radius:2px; letter-spacing:0.08em;">Missed</span>
+    <span style="font-size:11px; padding:4px 10px; background:var(--nk-sem-pend-bg); color:var(--nk-sem-pend-tx); border-radius:2px; letter-spacing:0.08em;">Pending</span>
+    <span style="font-size:11px; padding:4px 10px; background:var(--nk-sem-str-bg); color:var(--nk-sem-str-tx); border-radius:2px; letter-spacing:0.08em;">Streak</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Typography</p>
+  <div class="type-row"><span class="type-meta">Display</span><span class="t-display">Stillness</span><span class="type-spec">Cormorant 36/300</span><span class="type-spec">ls 0.08em</span></div>
+  <div class="type-row"><span class="type-meta">Heading</span><span class="t-heading">Morning routine</span><span class="type-spec">Cormorant 22/400</span><span class="type-spec">ls 0.06em</span></div>
+  <div class="type-row"><span class="type-meta">Subheading</span><span class="t-subheading">This week</span><span class="type-spec">Zen Kaku 13/300</span><span class="type-spec">ls 0.2em</span></div>
+  <div class="type-row"><span class="type-meta">Body</span><span class="t-body">Begin each day with a single intention.</span><span class="type-spec">Zen Kaku 15/300</span><span class="type-spec">lh 1.8</span></div>
+  <div class="type-row"><span class="type-meta">Caption</span><span class="t-caption">7 day streak — last completed yesterday</span><span class="type-spec">Zen Kaku 11/300</span><span class="type-spec">ls 0.1em</span></div>
+  <div class="type-row"><span class="type-meta">Label</span><span class="t-label">Habit name</span><span class="type-spec">Zen Kaku 10/300</span><span class="type-spec">ls 0.25em</span></div>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Buttons</p>
+  <div class="button-row">
+    <div class="btn-item"><button class="btn-primary">Begin</button><p class="btn-label">Primary</p></div>
+    <div class="btn-item"><button class="btn-secondary">Add habit</button><p class="btn-label">Secondary</p></div>
+    <div class="btn-item"><button class="btn-ghost">Skip</button><p class="btn-label">Ghost</p></div>
+    <div class="btn-item"><button class="btn-danger">Delete</button><p class="btn-label">Destructive</p></div>
+    <div class="btn-item"><button class="btn-icon"><i class="ti ti-plus" aria-hidden="true"></i></button><p class="btn-label">Icon</p></div>
+    <div class="btn-item"><button class="btn-icon-accent"><i class="ti ti-check" aria-hidden="true"></i></button><p class="btn-label">Complete</p></div>
+  </div>
+  <p style="font-size:10px; letter-spacing:0.12em; color:var(--nk-mist); margin-bottom:2rem;">Radius: 2px · All caps · Letter-spacing: 0.2em · No hover shadows</p>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Form Elements</p>
+  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:2rem;">
+    <div><p class="t-label" style="margin-bottom:6px;">Habit name</p><input class="nk-input" type="text" placeholder="e.g. Meditate for 10 minutes" /></div>
+    <div><p class="t-label" style="margin-bottom:6px;">Intention (underline variant)</p><input class="nk-input-underline" type="text" placeholder="Today I will…" /></div>
+    <div><p class="t-label" style="margin-bottom:6px;">Frequency</p>
+      <select class="nk-input" style="width:300px; appearance:none; cursor:pointer;">
+        <option>Daily</option><option>Weekdays</option><option>3× per week</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Habit Card Component</p>
+  <div style="margin-bottom:2rem;">
+    <div class="habit-card">
+      <div>
+        <p class="habit-name">Meditate</p>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+          <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+          <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+          <div class="dot today"></div>
+        </div>
+        <p style="font-size:9px; letter-spacing:0.15em; color:var(--nk-mist); margin-top:5px; text-transform:uppercase;">Mon → Sun</p>
+      </div>
+      <div style="text-align:right;">
+        <p class="habit-streak">6</p>
+        <p style="font-size:9px; letter-spacing:0.15em; color:var(--nk-mist); text-transform:uppercase;">day streak</p>
+      </div>
+    </div>
+    <div class="habit-card" style="opacity:0.5;">
+      <div>
+        <p class="habit-name">Read 20 pages</p>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+          <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+          <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+        <p style="font-size:9px; letter-spacing:0.15em; color:var(--nk-mist); margin-top:5px; text-transform:uppercase;">Mon → Sun</p>
+      </div>
+      <div style="text-align:right;">
+        <p class="habit-streak">2</p>
+        <p style="font-size:9px; letter-spacing:0.15em; color:var(--nk-mist); text-transform:uppercase;">day streak</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="section-label">Spacing Scale</p>
+  <div class="spacing-row">
+    <div class="space-block"><div class="space-vis" style="height:4px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">4px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">xs</p></div>
+    <div class="space-block"><div class="space-vis" style="height:8px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">8px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">sm</p></div>
+    <div class="space-block"><div class="space-vis" style="height:12px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">12px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">md</p></div>
+    <div class="space-block"><div class="space-vis" style="height:20px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">20px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">lg</p></div>
+    <div class="space-block"><div class="space-vis" style="height:32px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">32px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">xl</p></div>
+    <div class="space-block"><div class="space-vis" style="height:48px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">48px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">2xl</p></div>
+    <div class="space-block"><div class="space-vis" style="height:64px;"></div><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">64px</p><p class="type-spec" style="font-size:9px;color:var(--nk-mist);">3xl</p></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="two-col">
+    <div>
+      <p class="section-label">Border Radius</p>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="width:48px;height:48px;background:var(--nk-raised);border:0.5px solid var(--nk-stone);border-radius:0;"></div><p class="t-label">0 · sharp</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="width:48px;height:48px;background:var(--nk-raised);border:0.5px solid var(--nk-stone);border-radius:2px;"></div><p class="t-label">2px · default</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="width:48px;height:48px;background:var(--nk-raised);border:0.5px solid var(--nk-stone);border-radius:6px;"></div><p class="t-label">6px · card</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="width:48px;height:48px;background:var(--nk-raised);border:0.5px solid var(--nk-stone);border-radius:50%;"></div><p class="t-label">50% · icon</p></div>
+      </div>
+    </div>
+    <div>
+      <p class="section-label">Border Style</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:10px 14px; border:0.5px solid var(--nk-stone); border-radius:2px; font-size:12px; color:var(--nk-ash); letter-spacing:0.08em;">0.5px · resting</div>
+        <div style="padding:10px 14px; border:0.5px solid var(--nk-ash); border-radius:2px; font-size:12px; color:var(--nk-ink); letter-spacing:0.08em;">0.5px · focused</div>
+        <div style="padding:10px 14px; border:0.5px solid var(--nk-accent); border-radius:2px; font-size:12px; color:var(--nk-accent); letter-spacing:0.08em;">0.5px · active</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <p style="font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--nk-mist); text-align:center;">Nenko · 日々 · No motion without meaning</p>
+</div>
+
+<script>
+var isDark = false;
+
+var lightSwatches = [
+  {bg:'#2d4a3e', label:'Accent'},
+  {bg:'#4a5c40', label:'Moss'},
+  {bg:'#7a8c70', label:'Sage'},
+  {bg:'#c4a882', label:'Warm'},
+  {bg:'#a8a89e', label:'Mist'},
+  {bg:'#e8e6e0', label:'Stone'},
+  {bg:'#f5f3ee', label:'Paper', border:'0.5px solid #e0ded8'}
+];
+
+var darkSwatches = [
+  {bg:'#6a9e8a', label:'Accent'},
+  {bg:'#8fa882', label:'Sage'},
+  {bg:'#c4a882', label:'Warm'},
+  {bg:'#a8a49c', label:'Ash'},
+  {bg:'#5c5a54', label:'Mist'},
+  {bg:'#333128', label:'Stone'},
+  {bg:'#1e1d1b', label:'Surface', border:'0.5px solid #333128'}
+];
+
+function renderPalette(swatches) {
+  var p = document.getElementById('palette');
+  p.innerHTML = '';
+  swatches.forEach(function(s) {
+    var col = document.createElement('div');
+    col.className = 'swatch-col';
+    col.innerHTML = '<div class="swatch" style="background:' + s.bg + ';' + (s.border ? 'border:' + s.border + ';' : '') + '"></div><div class="swatch-label">' + s.label + '<br>' + s.bg.toUpperCase() + '</div>';
+    p.appendChild(col);
+  });
+}
+
+function toggleMode() {
+  isDark = !isDark;
+  var root = document.getElementById('root');
+  var btn = document.getElementById('modeBtn');
+  var icon = document.getElementById('modeIcon');
+  var label = document.getElementById('modeLabel');
+  if (isDark) {
+    root.className = 'spec-root dark';
+    icon.className = 'ti ti-sun';
+    label.textContent = 'Light mode';
+    renderPalette(darkSwatches);
+  } else {
+    root.className = 'spec-root light';
+    icon.className = 'ti ti-moon';
+    label.textContent = 'Dark mode';
+    renderPalette(lightSwatches);
+  }
+}
+
+renderPalette(lightSwatches);
+</script>
