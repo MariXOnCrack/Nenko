@@ -199,6 +199,8 @@ function App() {
         habits={habits}
         loading={loading}
         onAddHabit={() => setAddHabitOpen(true)}
+        onClearTodayEntry={(habit) => deleteEntry(habit.id, todayKey)}
+        onClockTodayEntry={(habit) => saveEntry(habit.id, { completed: true })}
         onClearPhotos={clearPhotos}
         onDeleteHabitRequest={setDeleteHabit}
         onNumberHabit={setNumberHabit}
@@ -277,6 +279,8 @@ function HabitApp({
   habits,
   loading,
   onAddHabit,
+  onClearTodayEntry,
+  onClockTodayEntry,
   onClearPhotos,
   onDeleteHabitRequest,
   onNumberHabit,
@@ -318,6 +322,8 @@ function HabitApp({
           entriesByHabit={entriesByHabit}
           habits={habits}
           onAddHabit={onAddHabit}
+          onClearTodayEntry={onClearTodayEntry}
+          onClockTodayEntry={onClockTodayEntry}
           onDeleteHabitRequest={onDeleteHabitRequest}
           onNumberHabit={onNumberHabit}
           onPhotoChange={onPhotoChange}
@@ -346,7 +352,17 @@ function HabitApp({
   );
 }
 
-function HabitsTab({ entriesByHabit, habits, onAddHabit, onDeleteHabitRequest, onNumberHabit, onPhotoChange, onToggleClock }) {
+function HabitsTab({
+  entriesByHabit,
+  habits,
+  onAddHabit,
+  onClearTodayEntry,
+  onClockTodayEntry,
+  onDeleteHabitRequest,
+  onNumberHabit,
+  onPhotoChange,
+  onToggleClock,
+}) {
   return (
     <div className="habits-tab tab-panel">
       <div className="habits-toolbar">
@@ -361,6 +377,8 @@ function HabitsTab({ entriesByHabit, habits, onAddHabit, onDeleteHabitRequest, o
             entries={entriesByHabit.get(habit.id) ?? []}
             habit={habit}
             key={habit.id}
+            onClearTodayEntry={onClearTodayEntry}
+            onClockTodayEntry={onClockTodayEntry}
             onDeleteHabitRequest={onDeleteHabitRequest}
             onNumberHabit={onNumberHabit}
             onPhotoChange={onPhotoChange}
@@ -372,7 +390,16 @@ function HabitsTab({ entriesByHabit, habits, onAddHabit, onDeleteHabitRequest, o
   );
 }
 
-function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhotoChange, onToggleClock }) {
+function HabitTile({
+  entries,
+  habit,
+  onClearTodayEntry,
+  onClockTodayEntry,
+  onDeleteHabitRequest,
+  onNumberHabit,
+  onPhotoChange,
+  onToggleClock,
+}) {
   const todayEntry = entries.find((entry) => entry.date === todayKey);
 
   if (habit.type === 'photo') {
@@ -380,6 +407,8 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
       <PhotoComparator
         entries={entries}
         habit={habit}
+        onClearTodayEntry={onClearTodayEntry}
+        onClockTodayEntry={onClockTodayEntry}
         onDeleteHabitRequest={onDeleteHabitRequest}
         onPhotoChange={onPhotoChange}
       />
@@ -400,24 +429,37 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
       ? 'Completed today'
       : 'Waiting for check-in'
     : todayEntry?.value == null
-      ? habit.target
-        ? `Target ${habit.target}`
-        : 'No value yet'
+      ? todayEntry?.completed
+        ? 'Clocked today'
+        : habit.target
+          ? `Target ${habit.target}`
+          : 'No value yet'
       : `${todayEntry.value} logged today`;
-  const clockSwipeAction = isClock
+  const rightSwipeAction = isClock
     ? {
         actionIcon: Check,
         actionLabel: complete ? 'Unclock' : 'Clock',
         actionVariant: complete ? 'unclock' : 'clock',
         onSwipeRight: () => onToggleClock(habit),
       }
-    : {};
+    : {
+        actionIcon: complete ? Minus : Check,
+        actionLabel: complete ? 'Unclock' : 'Clock',
+        actionVariant: complete ? 'unclock' : 'clock',
+        onSwipeRight: () => {
+          if (complete) {
+            onClearTodayEntry(habit);
+            return;
+          }
+          onClockTodayEntry(habit);
+        },
+      };
 
   return (
     <SwipeHabitCard
       habit={habit}
       onDeleteRequest={onDeleteHabitRequest}
-      {...clockSwipeAction}
+      {...rightSwipeAction}
     >
       <article
         className={[
@@ -647,7 +689,7 @@ function Metric({ label, value }) {
 
 function NumberStatsCard({ stats }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const swipeStartY = useRef(null);
+  const swipeStartX = useRef(null);
   const lastSwitchRef = useRef(0);
   const activeStat = stats[clamp(activeIndex, 0, Math.max(0, stats.length - 1))];
 
@@ -664,21 +706,21 @@ function NumberStatsCard({ stats }) {
   }
 
   function handleWheel(event) {
-    if (Math.abs(event.deltaY) < 18) return;
+    if (Math.abs(event.deltaX) < 18) return;
     event.preventDefault();
-    switchStat(event.deltaY > 0 ? 1 : -1);
+    switchStat(event.deltaX > 0 ? 1 : -1);
   }
 
   function handlePointerDown(event) {
-    swipeStartY.current = event.clientY;
+    swipeStartX.current = event.clientX;
   }
 
   function handlePointerUp(event) {
-    if (swipeStartY.current == null) return;
-    const deltaY = event.clientY - swipeStartY.current;
-    swipeStartY.current = null;
-    if (Math.abs(deltaY) < 34) return;
-    switchStat(deltaY < 0 ? 1 : -1);
+    if (swipeStartX.current == null) return;
+    const deltaX = event.clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(deltaX) < 34) return;
+    switchStat(deltaX < 0 ? 1 : -1);
   }
 
   if (!activeStat) {
@@ -701,7 +743,7 @@ function NumberStatsCard({ stats }) {
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={() => {
-        swipeStartY.current = null;
+        swipeStartX.current = null;
       }}
       aria-label={`${activeStat.habit.name} number habit statistics`}
     >
@@ -1175,20 +1217,35 @@ function ConfirmDeleteModal({ habit, isDeleting, onCancel, onConfirm }) {
   );
 }
 
-function PhotoComparator({ entries, habit, onDeleteHabitRequest, onPhotoChange }) {
+function PhotoComparator({ entries, habit, onClearTodayEntry, onClockTodayEntry, onDeleteHabitRequest, onPhotoChange }) {
   const inputRef = useRef(null);
   const todayEntry = entries.find((entry) => entry.date === todayKey);
   const photoEntries = entries.filter((entry) => entry.photoData).sort((a, b) => a.date.localeCompare(b.date));
   const complete = isEntryComplete(todayEntry, habit.type);
   const progressText = complete
-    ? 'Photo saved today'
+    ? todayEntry?.photoData
+      ? 'Photo saved today'
+      : 'Clocked today'
     : photoEntries.length
       ? `${photoEntries.length} in gallery`
       : 'Tap to add day 1';
   const openFilePicker = () => inputRef.current?.click();
 
   return (
-    <SwipeHabitCard habit={habit} onDeleteRequest={onDeleteHabitRequest}>
+    <SwipeHabitCard
+      actionIcon={complete ? Minus : Camera}
+      actionLabel={complete ? 'Unclock' : 'Photo'}
+      actionVariant={complete ? 'unclock' : 'clock'}
+      habit={habit}
+      onDeleteRequest={onDeleteHabitRequest}
+      onSwipeRight={() => {
+        if (complete) {
+          onClearTodayEntry(habit);
+          return;
+        }
+        onClockTodayEntry(habit);
+      }}
+    >
       <article
         className={complete ? 'habit-card photo-card action-card animated-card is-complete-card' : 'habit-card photo-card action-card animated-card'}
         onClick={openFilePicker}
@@ -1209,7 +1266,7 @@ function PhotoComparator({ entries, habit, onDeleteHabitRequest, onPhotoChange }
         </div>
 
         <span className={complete ? 'plain-button is-complete file-button' : 'plain-button file-button'}>
-          {complete ? 'Photo saved' : 'Take photo'}
+          {complete ? (todayEntry?.photoData ? 'Photo saved' : 'Clocked') : 'Take photo'}
           <Camera size={17} strokeWidth={1.8} />
         </span>
         <input
@@ -1249,8 +1306,8 @@ function upsertEntry(entries, nextEntry) {
 function isEntryComplete(entry, type) {
   if (!entry) return false;
   if (type === 'clock') return entry.completed === true;
-  if (type === 'number') return entry.value !== null;
-  if (type === 'photo') return Boolean(entry.photoData);
+  if (type === 'number') return entry.completed === true || entry.value !== null;
+  if (type === 'photo') return entry.completed === true || Boolean(entry.photoData);
   return false;
 }
 
