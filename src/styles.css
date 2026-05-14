@@ -1208,15 +1208,26 @@ p {
   padding: 18px;
   background: rgba(7, 7, 6, 0.58);
   backdrop-filter: blur(12px);
+  overflow-y: auto;
 }
 
 .modal-panel {
+  --modal-y: 0px;
   width: min(100%, 420px);
   padding: 18px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--surface);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+}
+
+.number-modal-backdrop {
+  place-items: start center;
+  padding-top: clamp(34px, 11dvh, 96px);
+}
+
+.number-modal-panel {
+  --modal-y: -4px;
 }
 
 .confirm-panel {
@@ -1313,12 +1324,12 @@ p {
 @keyframes popIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    transform: translateY(calc(var(--modal-y) + 10px)) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(var(--modal-y)) scale(1);
   }
 }
 
@@ -1469,6 +1480,14 @@ p {
 
   .photo-card .plain-button {
     min-height: 30px;
+  }
+
+  .number-modal-backdrop {
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+
+  .number-modal-panel {
+    --modal-y: 0px;
   }
 
   .gallery-grid,

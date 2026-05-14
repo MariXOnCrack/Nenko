@@ -200,7 +200,6 @@ function App() {
         loading={loading}
         onAddHabit={() => setAddHabitOpen(true)}
         onClearTodayEntry={(habit) => deleteEntry(habit.id, todayKey)}
-        onClockTodayEntry={(habit) => saveEntry(habit.id, { completed: true })}
         onClearPhotos={clearPhotos}
         onDeleteHabitRequest={setDeleteHabit}
         onNumberHabit={setNumberHabit}
@@ -280,7 +279,6 @@ function HabitApp({
   loading,
   onAddHabit,
   onClearTodayEntry,
-  onClockTodayEntry,
   onClearPhotos,
   onDeleteHabitRequest,
   onNumberHabit,
@@ -323,7 +321,6 @@ function HabitApp({
           habits={habits}
           onAddHabit={onAddHabit}
           onClearTodayEntry={onClearTodayEntry}
-          onClockTodayEntry={onClockTodayEntry}
           onDeleteHabitRequest={onDeleteHabitRequest}
           onNumberHabit={onNumberHabit}
           onPhotoChange={onPhotoChange}
@@ -357,7 +354,6 @@ function HabitsTab({
   habits,
   onAddHabit,
   onClearTodayEntry,
-  onClockTodayEntry,
   onDeleteHabitRequest,
   onNumberHabit,
   onPhotoChange,
@@ -378,7 +374,6 @@ function HabitsTab({
             habit={habit}
             key={habit.id}
             onClearTodayEntry={onClearTodayEntry}
-            onClockTodayEntry={onClockTodayEntry}
             onDeleteHabitRequest={onDeleteHabitRequest}
             onNumberHabit={onNumberHabit}
             onPhotoChange={onPhotoChange}
@@ -394,7 +389,6 @@ function HabitTile({
   entries,
   habit,
   onClearTodayEntry,
-  onClockTodayEntry,
   onDeleteHabitRequest,
   onNumberHabit,
   onPhotoChange,
@@ -408,7 +402,6 @@ function HabitTile({
         entries={entries}
         habit={habit}
         onClearTodayEntry={onClearTodayEntry}
-        onClockTodayEntry={onClockTodayEntry}
         onDeleteHabitRequest={onDeleteHabitRequest}
         onPhotoChange={onPhotoChange}
       />
@@ -443,15 +436,15 @@ function HabitTile({
         onSwipeRight: () => onToggleClock(habit),
       }
     : {
-        actionIcon: complete ? Minus : Check,
-        actionLabel: complete ? 'Unclock' : 'Clock',
+        actionIcon: complete ? Minus : Hash,
+        actionLabel: complete ? 'Unclock' : 'Number',
         actionVariant: complete ? 'unclock' : 'clock',
         onSwipeRight: () => {
           if (complete) {
             onClearTodayEntry(habit);
             return;
           }
-          onClockTodayEntry(habit);
+          onNumberHabit(habit);
         },
       };
 
@@ -1076,8 +1069,8 @@ function NumberHabitModal({ habit, initialValue, onClose, onSave }) {
   const canSave = Number.isFinite(Number(draft)) && Number(draft) >= 0;
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <div className="modal-panel pop-panel" role="dialog" aria-modal="true" aria-labelledby="number-modal-title">
+    <div className="modal-backdrop number-modal-backdrop" role="presentation">
+      <div className="modal-panel number-modal-panel pop-panel" role="dialog" aria-modal="true" aria-labelledby="number-modal-title">
         <div className="modal-header">
           <div>
             <p className="eyebrow">Number habit</p>
@@ -1094,6 +1087,7 @@ function NumberHabitModal({ habit, initialValue, onClose, onSave }) {
           </button>
           <input
             autoFocus
+            enterKeyHint="done"
             inputMode="decimal"
             min="0"
             type="number"
@@ -1217,7 +1211,7 @@ function ConfirmDeleteModal({ habit, isDeleting, onCancel, onConfirm }) {
   );
 }
 
-function PhotoComparator({ entries, habit, onClearTodayEntry, onClockTodayEntry, onDeleteHabitRequest, onPhotoChange }) {
+function PhotoComparator({ entries, habit, onClearTodayEntry, onDeleteHabitRequest, onPhotoChange }) {
   const inputRef = useRef(null);
   const todayEntry = entries.find((entry) => entry.date === todayKey);
   const photoEntries = entries.filter((entry) => entry.photoData).sort((a, b) => a.date.localeCompare(b.date));
@@ -1229,7 +1223,21 @@ function PhotoComparator({ entries, habit, onClearTodayEntry, onClockTodayEntry,
     : photoEntries.length
       ? `${photoEntries.length} in gallery`
       : 'Tap to add day 1';
-  const openFilePicker = () => inputRef.current?.click();
+  const openFilePicker = () => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Browser may reject showPicker outside a trusted gesture; click is the fallback.
+      }
+    }
+
+    input.click();
+  };
 
   return (
     <SwipeHabitCard
@@ -1243,7 +1251,7 @@ function PhotoComparator({ entries, habit, onClearTodayEntry, onClockTodayEntry,
           onClearTodayEntry(habit);
           return;
         }
-        onClockTodayEntry(habit);
+        openFilePicker();
       }}
     >
       <article
