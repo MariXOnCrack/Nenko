@@ -1570,8 +1570,9 @@ function BambooScene({ variant = 'splash' }) {
         frame = window.requestAnimationFrame(animate);
         const time = performance.now() * 0.001;
 
-        group.rotation.y = Math.sin(time * 0.34) * 0.06;
-        group.position.y = Math.sin(time * 0.5) * 0.025 - 0.02;
+        group.rotation.y = Math.sin(time * 0.28) * 0.055;
+        group.rotation.z = Math.sin(time * 0.22) * 0.012;
+        group.position.y = Math.sin(time * 0.42) * 0.035 + 0.08;
 
         renderer.render(scene, camera);
       };
