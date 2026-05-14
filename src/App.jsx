@@ -409,7 +409,7 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
         actionIcon: Check,
         actionLabel: complete ? 'Unclock' : 'Clock',
         actionVariant: complete ? 'unclock' : 'clock',
-        onSwipeLeft: () => onToggleClock(habit),
+        onSwipeRight: () => onToggleClock(habit),
       }
     : {};
 
@@ -463,12 +463,12 @@ function SwipeHabitCard({
   children,
   habit,
   onDeleteRequest,
-  onSwipeLeft,
+  onSwipeRight,
 }) {
   const [offset, setOffset] = useState(0);
   const offsetRef = useRef(0);
   const openRef = useRef(false);
-  const isImmediateAction = Boolean(onSwipeLeft);
+  const hasRightAction = Boolean(onSwipeRight);
   const dragRef = useRef({
     didDrag: false,
     pointerId: null,
@@ -483,11 +483,6 @@ function SwipeHabitCard({
   }
 
   function setOpen(nextOpen) {
-    if (isImmediateAction) {
-      openRef.current = false;
-      updateOffset(0);
-      return;
-    }
     openRef.current = nextOpen;
     updateOffset(nextOpen ? -86 : 0);
   }
@@ -511,19 +506,23 @@ function SwipeHabitCard({
     if (Math.abs(deltaX) < 6 && !drag.didDrag) return;
 
     drag.didDrag = true;
-    updateOffset(Math.max(-86, Math.min(0, drag.startOffset + deltaX)));
+    updateOffset(Math.max(-86, Math.min(hasRightAction ? 86 : 0, drag.startOffset + deltaX)));
   }
 
   function handlePointerUp(event) {
     const drag = dragRef.current;
     if (drag.pointerId !== event.pointerId) return;
 
-    const shouldOpen = offsetRef.current < -42;
-    if (isImmediateAction) {
-      if (shouldOpen) onSwipeLeft();
+    const shouldOpenDelete = offsetRef.current < -42;
+    const shouldRunRightAction = hasRightAction && offsetRef.current > 42;
+
+    if (shouldRunRightAction) {
+      onSwipeRight();
       setOpen(false);
+    } else if (shouldOpenDelete) {
+      setOpen(true);
     } else {
-      setOpen(shouldOpen);
+      setOpen(false);
     }
     window.setTimeout(() => {
       drag.didDrag = false;
@@ -544,22 +543,33 @@ function SwipeHabitCard({
 
   return (
     <div className={isOpen ? 'swipe-card is-open' : 'swipe-card'}>
+      {hasRightAction && (
+        <button
+          className={`swipe-clock-action swipe-action-${actionVariant}`}
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setOpen(false);
+            onSwipeRight();
+          }}
+          aria-label={`${actionLabel} ${habit.name}`}
+        >
+          <ActionIcon size={17} strokeWidth={1.8} />
+          <span>{actionLabel}</span>
+        </button>
+      )}
       <button
-        className={`swipe-delete swipe-action-${actionVariant}`}
+        className="swipe-delete swipe-action-delete"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           setOpen(false);
-          if (isImmediateAction) {
-            onSwipeLeft();
-          } else {
-            onDeleteRequest(habit);
-          }
+          onDeleteRequest(habit);
         }}
-        aria-label={isImmediateAction ? `${actionLabel} ${habit.name}` : `Delete ${habit.name}`}
+        aria-label={`Delete ${habit.name}`}
       >
-        <ActionIcon size={17} strokeWidth={1.8} />
-        <span>{actionLabel}</span>
+        <Trash2 size={17} strokeWidth={1.8} />
+        <span>Delete</span>
       </button>
       <div
         className="swipe-card-surface"
