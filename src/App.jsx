@@ -32,20 +32,26 @@ const themeOptions = [
   {
     id: 'forest',
     label: 'Bamboo',
-    description: 'Deep green glass',
+    description: 'Moss glass',
     swatch: '#8fa882',
   },
   {
     id: 'ink',
-    label: 'Ink',
-    description: 'Cool monochrome',
-    swatch: '#aeb7c2',
+    label: 'Graphite',
+    description: 'Blue steel',
+    swatch: '#91a7bd',
   },
   {
     id: 'plum',
-    label: 'Plum',
-    description: 'Quiet warm accent',
+    label: 'Sakura',
+    description: 'Soft plum',
     swatch: '#b58fa5',
+  },
+  {
+    id: 'tide',
+    label: 'Tide',
+    description: 'Deep cyan',
+    swatch: '#79b5b0',
   },
 ];
 
@@ -319,7 +325,9 @@ function HabitApp({
         />
       )}
 
-      {!error && !loading && activeTab === 'progress' && <ProgressTab progressLog={progressLog} />}
+      {!error && !loading && activeTab === 'progress' && (
+        <ProgressTab entriesByHabit={entriesByHabit} habits={habits} progressLog={progressLog} />
+      )}
 
       {!error && !loading && activeTab === 'gallery' && <GalleryTab entriesByHabit={entriesByHabit} habits={habits} />}
 
@@ -396,9 +404,21 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
         ? `Target ${habit.target}`
         : 'No value yet'
       : `${todayEntry.value} logged today`;
+  const clockSwipeAction = isClock
+    ? {
+        actionIcon: Check,
+        actionLabel: complete ? 'Unclock' : 'Clock',
+        actionVariant: complete ? 'unclock' : 'clock',
+        onSwipeLeft: () => onToggleClock(habit),
+      }
+    : {};
 
   return (
-    <SwipeHabitCard habit={habit} onDeleteRequest={onDeleteHabitRequest}>
+    <SwipeHabitCard
+      habit={habit}
+      onDeleteRequest={onDeleteHabitRequest}
+      {...clockSwipeAction}
+    >
       <article
         className={[
           'habit-card action-card animated-card',
@@ -436,10 +456,19 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
   );
 }
 
-function SwipeHabitCard({ children, habit, onDeleteRequest }) {
+function SwipeHabitCard({
+  actionIcon: ActionIcon = Trash2,
+  actionLabel = 'Delete',
+  actionVariant = 'delete',
+  children,
+  habit,
+  onDeleteRequest,
+  onSwipeLeft,
+}) {
   const [offset, setOffset] = useState(0);
   const offsetRef = useRef(0);
   const openRef = useRef(false);
+  const isImmediateAction = Boolean(onSwipeLeft);
   const dragRef = useRef({
     didDrag: false,
     pointerId: null,
@@ -454,6 +483,11 @@ function SwipeHabitCard({ children, habit, onDeleteRequest }) {
   }
 
   function setOpen(nextOpen) {
+    if (isImmediateAction) {
+      openRef.current = false;
+      updateOffset(0);
+      return;
+    }
     openRef.current = nextOpen;
     updateOffset(nextOpen ? -86 : 0);
   }
@@ -485,7 +519,12 @@ function SwipeHabitCard({ children, habit, onDeleteRequest }) {
     if (drag.pointerId !== event.pointerId) return;
 
     const shouldOpen = offsetRef.current < -42;
-    setOpen(shouldOpen);
+    if (isImmediateAction) {
+      if (shouldOpen) onSwipeLeft();
+      setOpen(false);
+    } else {
+      setOpen(shouldOpen);
+    }
     window.setTimeout(() => {
       drag.didDrag = false;
     }, 180);
@@ -506,17 +545,21 @@ function SwipeHabitCard({ children, habit, onDeleteRequest }) {
   return (
     <div className={isOpen ? 'swipe-card is-open' : 'swipe-card'}>
       <button
-        className="swipe-delete"
+        className={`swipe-delete swipe-action-${actionVariant}`}
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           setOpen(false);
-          onDeleteRequest(habit);
+          if (isImmediateAction) {
+            onSwipeLeft();
+          } else {
+            onDeleteRequest(habit);
+          }
         }}
-        aria-label={`Delete ${habit.name}`}
+        aria-label={isImmediateAction ? `${actionLabel} ${habit.name}` : `Delete ${habit.name}`}
       >
-        <Trash2 size={17} strokeWidth={1.8} />
-        <span>Delete</span>
+        <ActionIcon size={17} strokeWidth={1.8} />
+        <span>{actionLabel}</span>
       </button>
       <div
         className="swipe-card-surface"
@@ -533,8 +576,9 @@ function SwipeHabitCard({ children, habit, onDeleteRequest }) {
   );
 }
 
-function ProgressTab({ progressLog }) {
+function ProgressTab({ entriesByHabit, habits, progressLog }) {
   const days = useMemo(() => buildProgressDays(progressLog), [progressLog]);
+  const numberStats = useMemo(() => buildNumberStats(habits, entriesByHabit), [entriesByHabit, habits]);
   const total = days.reduce((sum, day) => sum + day.count, 0);
   const activeDays = days.filter((day) => day.count > 0).length;
   const best = days.reduce((max, day) => Math.max(max, day.count), 0);
@@ -576,6 +620,8 @@ function ProgressTab({ progressLog }) {
           <span>More</span>
         </div>
       </section>
+
+      <NumberStatsCard stats={numberStats} />
     </div>
   );
 }
@@ -586,6 +632,98 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function NumberStatsCard({ stats }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const swipeStartY = useRef(null);
+  const lastSwitchRef = useRef(0);
+  const activeStat = stats[clamp(activeIndex, 0, Math.max(0, stats.length - 1))];
+
+  useEffect(() => {
+    setActiveIndex((index) => clamp(index, 0, Math.max(0, stats.length - 1)));
+  }, [stats.length]);
+
+  function switchStat(direction) {
+    if (stats.length <= 1) return;
+    const now = Date.now();
+    if (now - lastSwitchRef.current < 320) return;
+    lastSwitchRef.current = now;
+    setActiveIndex((index) => (index + direction + stats.length) % stats.length);
+  }
+
+  function handleWheel(event) {
+    if (Math.abs(event.deltaY) < 18) return;
+    event.preventDefault();
+    switchStat(event.deltaY > 0 ? 1 : -1);
+  }
+
+  function handlePointerDown(event) {
+    swipeStartY.current = event.clientY;
+  }
+
+  function handlePointerUp(event) {
+    if (swipeStartY.current == null) return;
+    const deltaY = event.clientY - swipeStartY.current;
+    swipeStartY.current = null;
+    if (Math.abs(deltaY) < 34) return;
+    switchStat(deltaY < 0 ? 1 : -1);
+  }
+
+  if (!activeStat) {
+    return (
+      <section className="number-stats-card" aria-label="Number habit statistics">
+        <div>
+          <p className="eyebrow">Numbers</p>
+          <h2>No number habits</h2>
+        </div>
+      </section>
+    );
+  }
+
+  const graph = buildLineGraph(activeStat.entries, activeStat.habit.target);
+
+  return (
+    <section
+      className="number-stats-card"
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => {
+        swipeStartY.current = null;
+      }}
+      aria-label={`${activeStat.habit.name} number habit statistics`}
+    >
+      <div className="number-stats-header">
+        <div>
+          <p className="eyebrow">Numbers</p>
+          <h2>{activeStat.habit.name}</h2>
+        </div>
+        <span>{activeIndex + 1} / {stats.length}</span>
+      </div>
+
+      <div className="number-metrics">
+        <Metric label="Latest" value={formatStatNumber(activeStat.latest)} />
+        <Metric label="Average" value={formatStatNumber(activeStat.average)} />
+        <Metric label="Target" value={activeStat.habit.target ?? '-'} />
+      </div>
+
+      <div className="line-chart" aria-label={`${activeStat.habit.name} line graph`}>
+        {graph.points ? (
+          <svg viewBox="0 0 320 160" role="img" aria-label={`${activeStat.habit.name} values over time`}>
+            <path className="line-grid" d="M18 38H302M18 80H302M18 122H302" />
+            {activeStat.habit.target != null && graph.targetPath && <path className="target-line" d={graph.targetPath} />}
+            <polyline className="line-path" points={graph.points} />
+            {graph.circles.map((point) => (
+              <circle className="line-point" cx={point.x} cy={point.y} r="3.5" key={`${point.x}-${point.y}`} />
+            ))}
+          </svg>
+        ) : (
+          <div className="chart-empty">No values yet</div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1134,6 +1272,69 @@ function buildProgressDays(progressLog) {
   }
 
   return days;
+}
+
+function buildNumberStats(habits, entriesByHabit) {
+  return habits
+    .filter((habit) => habit.type === 'number')
+    .map((habit) => {
+      const entries = (entriesByHabit.get(habit.id) ?? [])
+        .filter((entry) => entry.value !== null && Number.isFinite(Number(entry.value)))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-30);
+      const values = entries.map((entry) => Number(entry.value));
+      const total = values.reduce((sum, value) => sum + value, 0);
+
+      return {
+        average: values.length ? total / values.length : null,
+        entries,
+        habit,
+        latest: values.at(-1) ?? null,
+      };
+    });
+}
+
+function buildLineGraph(entries, target) {
+  const values = entries.map((entry) => Number(entry.value)).filter((value) => Number.isFinite(value));
+  if (!values.length) return { circles: [], points: null, targetPath: null };
+
+  const width = 320;
+  const height = 160;
+  const padX = 18;
+  const padY = 22;
+  const graphWidth = width - padX * 2;
+  const graphHeight = height - padY * 2;
+  const numericTarget = Number(target);
+  const domainValues = Number.isFinite(numericTarget) ? [...values, numericTarget] : values;
+  let min = Math.min(...domainValues);
+  let max = Math.max(...domainValues);
+
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+
+  const toPoint = (value, index) => {
+    const x = values.length === 1 ? width / 2 : padX + (index / (values.length - 1)) * graphWidth;
+    const y = padY + (1 - (value - min) / (max - min)) * graphHeight;
+    return {
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+    };
+  };
+  const circles = values.map(toPoint);
+  const points = circles.map((point) => `${point.x},${point.y}`).join(' ');
+  const targetPath = Number.isFinite(numericTarget)
+    ? `M${padX} ${Number((padY + (1 - (numericTarget - min) / (max - min)) * graphHeight).toFixed(2))}H${width - padX}`
+    : null;
+
+  return { circles, points, targetPath };
+}
+
+function formatStatNumber(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '-';
+  const number = Number(value);
+  return Number.isInteger(number) ? number : number.toFixed(1);
 }
 
 function countPhotoEntries(entriesByHabit, habits) {
