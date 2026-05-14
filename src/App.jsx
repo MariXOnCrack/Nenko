@@ -29,6 +29,26 @@ const typeLabels = {
   number: 'Number',
   photo: 'Comparator',
 };
+const themeOptions = [
+  {
+    id: 'forest',
+    label: 'Bamboo',
+    description: 'Deep green glass',
+    swatch: '#8fa882',
+  },
+  {
+    id: 'ink',
+    label: 'Ink',
+    description: 'Cool monochrome',
+    swatch: '#aeb7c2',
+  },
+  {
+    id: 'plum',
+    label: 'Plum',
+    description: 'Quiet warm accent',
+    swatch: '#b58fa5',
+  },
+];
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -40,6 +60,12 @@ function App() {
   const [error, setError] = useState('');
   const [numberHabit, setNumberHabit] = useState(null);
   const [addHabitOpen, setAddHabitOpen] = useState(false);
+  const [deleteHabit, setDeleteHabit] = useState(null);
+  const [deletingHabit, setDeletingHabit] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'forest';
+    return window.localStorage.getItem('nenko-theme') ?? 'forest';
+  });
 
   useEffect(() => {
     const fadeTimer = window.setTimeout(() => setSplashLeaving(true), 2200);
@@ -54,6 +80,11 @@ function App() {
   useEffect(() => {
     refreshState();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('nenko-theme', theme);
+  }, [theme]);
 
   async function refreshState() {
     setLoading(true);
@@ -142,6 +173,17 @@ function App() {
     setEntries((current) => current.filter((entry) => !photoIds.has(entry.habitId)));
   }
 
+  async function confirmDeleteHabit() {
+    if (!deleteHabit) return;
+    setDeletingHabit(true);
+    try {
+      await archiveHabit(deleteHabit.id);
+      setDeleteHabit(null);
+    } finally {
+      setDeletingHabit(false);
+    }
+  }
+
   return (
     <main className="app-root">
       <HabitApp
@@ -152,15 +194,17 @@ function App() {
         habits={habits}
         loading={loading}
         onAddHabit={() => setAddHabitOpen(true)}
-        onArchiveHabit={archiveHabit}
         onClearPhotos={clearPhotos}
+        onDeleteHabitRequest={setDeleteHabit}
         onNumberHabit={setNumberHabit}
         onPhotoChange={addPhoto}
         onRefresh={refreshState}
         onResetToday={resetToday}
         onTabChange={setActiveTab}
+        onThemeChange={setTheme}
         onToggleClock={toggleClock}
         progressLog={progressLog}
+        theme={theme}
       />
 
       {showSplash && <SplashScreen isLeaving={splashLeaving} />}
@@ -175,6 +219,15 @@ function App() {
       )}
 
       {addHabitOpen && <AddHabitModal onClose={() => setAddHabitOpen(false)} onSave={createHabit} />}
+
+      {deleteHabit && (
+        <ConfirmDeleteModal
+          habit={deleteHabit}
+          isDeleting={deletingHabit}
+          onCancel={() => setDeleteHabit(null)}
+          onConfirm={confirmDeleteHabit}
+        />
+      )}
     </main>
   );
 }
@@ -218,15 +271,17 @@ function HabitApp({
   habits,
   loading,
   onAddHabit,
-  onArchiveHabit,
   onClearPhotos,
+  onDeleteHabitRequest,
   onNumberHabit,
   onPhotoChange,
   onRefresh,
   onResetToday,
   onTabChange,
+  onThemeChange,
   onToggleClock,
   progressLog,
+  theme,
 }) {
   return (
     <section className="habit-app" aria-label="Nenko habit tracker">
@@ -257,7 +312,7 @@ function HabitApp({
           entriesByHabit={entriesByHabit}
           habits={habits}
           onAddHabit={onAddHabit}
-          onArchiveHabit={onArchiveHabit}
+          onDeleteHabitRequest={onDeleteHabitRequest}
           onNumberHabit={onNumberHabit}
           onPhotoChange={onPhotoChange}
           onToggleClock={onToggleClock}
@@ -272,7 +327,9 @@ function HabitApp({
         <SettingsTab
           onClearPhotos={onClearPhotos}
           onResetToday={onResetToday}
+          onThemeChange={onThemeChange}
           photoCount={countPhotoEntries(entriesByHabit, habits)}
+          theme={theme}
         />
       )}
 
@@ -281,7 +338,7 @@ function HabitApp({
   );
 }
 
-function HabitsTab({ entriesByHabit, habits, onAddHabit, onArchiveHabit, onNumberHabit, onPhotoChange, onToggleClock }) {
+function HabitsTab({ entriesByHabit, habits, onAddHabit, onDeleteHabitRequest, onNumberHabit, onPhotoChange, onToggleClock }) {
   return (
     <div className="habits-tab tab-panel">
       <div className="habits-toolbar">
@@ -296,7 +353,7 @@ function HabitsTab({ entriesByHabit, habits, onAddHabit, onArchiveHabit, onNumbe
             entries={entriesByHabit.get(habit.id) ?? []}
             habit={habit}
             key={habit.id}
-            onArchiveHabit={onArchiveHabit}
+            onDeleteHabitRequest={onDeleteHabitRequest}
             onNumberHabit={onNumberHabit}
             onPhotoChange={onPhotoChange}
             onToggleClock={onToggleClock}
@@ -307,7 +364,7 @@ function HabitsTab({ entriesByHabit, habits, onAddHabit, onArchiveHabit, onNumbe
   );
 }
 
-function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChange, onToggleClock }) {
+function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhotoChange, onToggleClock }) {
   const todayEntry = entries.find((entry) => entry.date === todayKey);
 
   if (habit.type === 'photo') {
@@ -315,7 +372,7 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
       <PhotoComparator
         entries={entries}
         habit={habit}
-        onArchiveHabit={onArchiveHabit}
+        onDeleteHabitRequest={onDeleteHabitRequest}
         onPhotoChange={onPhotoChange}
       />
     );
@@ -330,10 +387,6 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
     }
     onNumberHabit(habit);
   };
-  const archiveHabit = (event) => {
-    event.stopPropagation();
-    onArchiveHabit(habit.id);
-  };
   const meta = isClock
     ? complete
       ? 'Completed today'
@@ -345,36 +398,132 @@ function HabitTile({ entries, habit, onArchiveHabit, onNumberHabit, onPhotoChang
       : `${todayEntry.value} logged today`;
 
   return (
-    <article
-      className={complete ? 'habit-card action-card animated-card is-complete-card' : 'habit-card action-card animated-card'}
-      onClick={runPrimaryAction}
-      onKeyDown={(event) => activateOnKeyboard(event, runPrimaryAction)}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="card-topline">
-        <span className="type-icon">{isClock ? <Check size={18} strokeWidth={1.8} /> : <Hash size={18} strokeWidth={1.8} />}</span>
-        <span>{typeLabels[habit.type]}</span>
-        <button className="remove-button" type="button" onClick={archiveHabit} aria-label={`Archive ${habit.name}`}>
-          <X size={15} strokeWidth={1.8} />
-        </button>
+    <SwipeHabitCard habit={habit} onDeleteRequest={onDeleteHabitRequest}>
+      <article
+        className={complete ? 'habit-card action-card animated-card is-complete-card' : 'habit-card action-card animated-card'}
+        onClick={runPrimaryAction}
+        onKeyDown={(event) => activateOnKeyboard(event, runPrimaryAction)}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="card-topline">
+          <span className="type-icon">{isClock ? <Check size={18} strokeWidth={1.8} /> : <Hash size={18} strokeWidth={1.8} />}</span>
+          <span>{typeLabels[habit.type]}</span>
+        </div>
+        <div>
+          <h2>{habit.name}</h2>
+          <p>{meta}</p>
+        </div>
+        {isClock ? (
+          <span className={complete ? 'plain-button is-complete' : 'plain-button'}>
+            {complete ? 'Clocked in' : 'Clock in'}
+            <Check size={17} strokeWidth={1.8} />
+          </span>
+        ) : (
+          <span className="plain-button">
+            {todayEntry?.value == null ? 'Enter number' : 'Update'}
+            <Hash size={17} strokeWidth={1.8} />
+          </span>
+        )}
+      </article>
+    </SwipeHabitCard>
+  );
+}
+
+function SwipeHabitCard({ children, habit, onDeleteRequest }) {
+  const [offset, setOffset] = useState(0);
+  const offsetRef = useRef(0);
+  const openRef = useRef(false);
+  const dragRef = useRef({
+    didDrag: false,
+    pointerId: null,
+    startOffset: 0,
+    startX: 0,
+  });
+  const isOpen = offset < -1;
+
+  function updateOffset(nextOffset) {
+    offsetRef.current = nextOffset;
+    setOffset(nextOffset);
+  }
+
+  function setOpen(nextOpen) {
+    openRef.current = nextOpen;
+    updateOffset(nextOpen ? -86 : 0);
+  }
+
+  function handlePointerDown(event) {
+    if (event.button !== 0 || event.target.closest('button, input, select, textarea, a')) return;
+    dragRef.current = {
+      didDrag: false,
+      pointerId: event.pointerId,
+      startOffset: openRef.current ? -86 : 0,
+      startX: event.clientX,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function handlePointerMove(event) {
+    const drag = dragRef.current;
+    if (drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startX;
+    if (Math.abs(deltaX) < 6 && !drag.didDrag) return;
+
+    drag.didDrag = true;
+    updateOffset(Math.max(-86, Math.min(0, drag.startOffset + deltaX)));
+  }
+
+  function handlePointerUp(event) {
+    const drag = dragRef.current;
+    if (drag.pointerId !== event.pointerId) return;
+
+    const shouldOpen = offsetRef.current < -42;
+    setOpen(shouldOpen);
+    window.setTimeout(() => {
+      drag.didDrag = false;
+    }, 180);
+    drag.pointerId = null;
+  }
+
+  function handleClickCapture(event) {
+    if (!dragRef.current.didDrag && !openRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!dragRef.current.didDrag && openRef.current) {
+      setOpen(false);
+    }
+    dragRef.current.didDrag = false;
+  }
+
+  return (
+    <div className={isOpen ? 'swipe-card is-open' : 'swipe-card'}>
+      <button
+        className="swipe-delete"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(false);
+          onDeleteRequest(habit);
+        }}
+        aria-label={`Delete ${habit.name}`}
+      >
+        <Trash2 size={17} strokeWidth={1.8} />
+        <span>Delete</span>
+      </button>
+      <div
+        className="swipe-card-surface"
+        style={{ transform: `translateX(${offset}px)` }}
+        onClickCapture={handleClickCapture}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        {children}
       </div>
-      <div>
-        <h2>{habit.name}</h2>
-        <p>{meta}</p>
-      </div>
-      {isClock ? (
-        <span className={complete ? 'plain-button is-complete' : 'plain-button'}>
-          {complete ? 'Clocked in' : 'Clock in'}
-          <Check size={17} strokeWidth={1.8} />
-        </span>
-      ) : (
-        <span className="plain-button">
-          {todayEntry?.value == null ? 'Enter number' : 'Update'}
-          <Hash size={17} strokeWidth={1.8} />
-        </span>
-      )}
-    </article>
+    </div>
   );
 }
 
@@ -460,42 +609,12 @@ function GalleryTab({ entriesByHabit, habits }) {
   }
 
   if (selectedFolder) {
-    const { entries, habit } = selectedFolder;
-
     return (
-      <div className="gallery-tab tab-panel">
-        <section className="gallery-section">
-          <div className="gallery-header">
-            <button className="gallery-back" type="button" onClick={() => setSelectedHabitId(null)} aria-label="Back to gallery folders">
-              <ArrowLeft size={18} strokeWidth={1.8} />
-              Folders
-            </button>
-            <div>
-              <h3>{habit.name}</h3>
-              <p>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'} logged` : 'Waiting for day 1'}</p>
-            </div>
-          </div>
-
-          {entries.length ? (
-            <>
-              <div className="gallery-comparison">
-                <GalleryPhoto entry={entries[0]} label="Day 1" />
-                <GalleryPhoto entry={entries.at(-1)} label="Latest" />
-              </div>
-
-              <div className="gallery-grid" aria-label={`${habit.name} photo history`}>
-                {entries.map((entry) => (
-                  <GalleryPhoto entry={entry} key={`${habit.id}-${entry.date}`} label={formatShortDate(entry.date)} />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="gallery-empty is-compact">
-              <p>No pictures saved for this comparator.</p>
-            </div>
-          )}
-        </section>
-      </div>
+      <GalleryFolderDetail
+        entries={selectedFolder.entries}
+        habit={selectedFolder.habit}
+        onBack={() => setSelectedHabitId(null)}
+      />
     );
   }
 
@@ -528,21 +647,177 @@ function GalleryTab({ entriesByHabit, habits }) {
   );
 }
 
-function GalleryPhoto({ entry, label }) {
+function GalleryFolderDetail({ entries, habit, onBack }) {
+  const [selectedIndex, setSelectedIndex] = useState(Math.max(0, entries.length - 1));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const photoSwipeRef = useRef({ didSwipe: false, startY: null });
+  const latestIndex = Math.max(0, entries.length - 1);
+  const activeIndex = clamp(selectedIndex, 0, latestIndex);
+  const firstEntry = entries[0];
+  const activeEntry = entries[activeIndex];
+
+  useEffect(() => {
+    setSelectedIndex(Math.max(0, entries.length - 1));
+  }, [entries.length, habit.id]);
+
+  function moveSelection(direction) {
+    setSelectedIndex((index) => clamp(index + direction, 0, latestIndex));
+  }
+
+  function handleSwipeStart(event) {
+    photoSwipeRef.current = { didSwipe: false, startY: event.clientY };
+  }
+
+  function handleSwipeEnd(event) {
+    if (photoSwipeRef.current.startY == null) return;
+    const deltaY = event.clientY - photoSwipeRef.current.startY;
+    photoSwipeRef.current.startY = null;
+    if (Math.abs(deltaY) < 32) return;
+    photoSwipeRef.current.didSwipe = true;
+    moveSelection(deltaY < 0 ? -1 : 1);
+    window.setTimeout(() => {
+      photoSwipeRef.current.didSwipe = false;
+    }, 160);
+  }
+
   return (
-    <figure className="gallery-photo">
+    <div className="gallery-tab tab-panel">
+      <section className="gallery-section">
+        <div className="gallery-header">
+          <button className="gallery-back" type="button" onClick={onBack} aria-label="Back to gallery folders">
+            <ArrowLeft size={18} strokeWidth={1.8} />
+            Folders
+          </button>
+          <div>
+            <h3>{habit.name}</h3>
+            <p>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'} logged` : 'Waiting for day 1'}</p>
+          </div>
+        </div>
+
+        {entries.length ? (
+          <>
+            <div className="gallery-comparison" aria-label={`${habit.name} photo comparison`}>
+              <ComparisonPhoto entry={firstEntry} label="First photo" />
+              <button
+                className="comparison-photo comparison-photo-button"
+                type="button"
+                onClick={(event) => {
+                  if (photoSwipeRef.current.didSwipe) {
+                    event.preventDefault();
+                    return;
+                  }
+                  setPickerOpen(true);
+                }}
+                onPointerDown={handleSwipeStart}
+                onPointerUp={handleSwipeEnd}
+                onPointerCancel={() => {
+                  photoSwipeRef.current.startY = null;
+                }}
+                aria-label="Open photo gallery"
+              >
+                <img src={activeEntry.photoData} alt="Selected comparator" />
+                <span>
+                  <strong>{activeIndex === latestIndex ? 'Newest photo' : 'Selected photo'}</strong>
+                  <small>{formatShortDate(activeEntry.date)}</small>
+                </span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="gallery-empty is-compact">
+            <p>No pictures saved for this comparator.</p>
+          </div>
+        )}
+      </section>
+
+      {pickerOpen && (
+        <PhotoPickerModal
+          entries={entries}
+          habit={habit}
+          selectedIndex={activeIndex}
+          onClose={() => setPickerOpen(false)}
+          onSelect={(index) => {
+            setSelectedIndex(index);
+            setPickerOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ComparisonPhoto({ entry, label }) {
+  return (
+    <figure className="comparison-photo">
       <img src={entry.photoData} alt={`${label} comparator`} />
       <figcaption>
-        <span>{label}</span>
+        <strong>{label}</strong>
         <small>{formatShortDate(entry.date)}</small>
       </figcaption>
     </figure>
   );
 }
 
-function SettingsTab({ onClearPhotos, onResetToday, photoCount }) {
+function PhotoPickerModal({ entries, habit, selectedIndex, onClose, onSelect }) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <div className="modal-panel pop-panel photo-picker-panel" role="dialog" aria-modal="true" aria-labelledby="photo-picker-title">
+        <div className="modal-header">
+          <div>
+            <p className="eyebrow">Gallery</p>
+            <h2 id="photo-picker-title">{habit.name}</h2>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Close photo gallery">
+            <X size={18} strokeWidth={1.8} />
+          </button>
+        </div>
+
+        <div className="photo-picker-grid">
+          {entries.map((entry, index) => (
+            <button
+              className={index === selectedIndex ? 'photo-picker-item is-selected' : 'photo-picker-item'}
+              type="button"
+              key={`${habit.id}-${entry.date}`}
+              onClick={() => onSelect(index)}
+            >
+              <img src={entry.photoData} alt={`${formatShortDate(entry.date)} comparator`} />
+              <span>{formatShortDate(entry.date)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsTab({ onClearPhotos, onResetToday, onThemeChange, photoCount, theme }) {
   return (
     <div className="settings-tab tab-panel">
+      <section className="settings-card">
+        <div>
+          <p className="eyebrow">Appearance</p>
+          <h2>Color theme</h2>
+        </div>
+        <div className="theme-grid" role="radiogroup" aria-label="Color theme">
+          {themeOptions.map((option) => (
+            <button
+              className={theme === option.id ? 'theme-choice is-active' : 'theme-choice'}
+              type="button"
+              key={option.id}
+              onClick={() => onThemeChange(option.id)}
+              role="radio"
+              aria-checked={theme === option.id}
+            >
+              <span className="theme-swatch" style={{ '--swatch': option.swatch }} />
+              <span>
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="settings-card">
         <div>
           <p className="eyebrow">Settings</p>
@@ -719,7 +994,31 @@ function AddHabitModal({ onClose, onSave }) {
   );
 }
 
-function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
+function ConfirmDeleteModal({ habit, isDeleting, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <div className="modal-panel pop-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+        <div>
+          <p className="eyebrow">Delete habit</p>
+          <h2 id="delete-modal-title">{habit.name}</h2>
+          <p>This removes the habit from your active list. Existing entries for it will be hidden with the habit.</p>
+        </div>
+
+        <div className="confirm-actions">
+          <button className="secondary-button" type="button" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </button>
+          <button className="danger-button" type="button" onClick={onConfirm} disabled={isDeleting}>
+            <Trash2 size={17} strokeWidth={1.8} />
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoComparator({ entries, habit, onDeleteHabitRequest, onPhotoChange }) {
   const inputRef = useRef(null);
   const todayEntry = entries.find((entry) => entry.date === todayKey);
   const photoEntries = entries.filter((entry) => entry.photoData).sort((a, b) => a.date.localeCompare(b.date));
@@ -730,48 +1029,43 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
       ? `${photoEntries.length} in gallery`
       : 'Tap to add day 1';
   const openFilePicker = () => inputRef.current?.click();
-  const archiveHabit = (event) => {
-    event.stopPropagation();
-    onArchiveHabit(habit.id);
-  };
 
   return (
-    <article
-      className={complete ? 'habit-card photo-card action-card animated-card is-complete-card' : 'habit-card photo-card action-card animated-card'}
-      onClick={openFilePicker}
-      onKeyDown={(event) => activateOnKeyboard(event, openFilePicker)}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="card-topline">
-        <span className="type-icon">
-          <Camera size={18} strokeWidth={1.8} />
+    <SwipeHabitCard habit={habit} onDeleteRequest={onDeleteHabitRequest}>
+      <article
+        className={complete ? 'habit-card photo-card action-card animated-card is-complete-card' : 'habit-card photo-card action-card animated-card'}
+        onClick={openFilePicker}
+        onKeyDown={(event) => activateOnKeyboard(event, openFilePicker)}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="card-topline">
+          <span className="type-icon">
+            <Camera size={18} strokeWidth={1.8} />
+          </span>
+          <span>Comparator</span>
+        </div>
+
+        <div>
+          <h2>{habit.name}</h2>
+          <p>{progressText}</p>
+        </div>
+
+        <span className={complete ? 'plain-button is-complete file-button' : 'plain-button file-button'}>
+          {complete ? 'Photo saved' : 'Take photo'}
+          <Camera size={17} strokeWidth={1.8} />
         </span>
-        <span>Comparator</span>
-        <button className="remove-button" type="button" onClick={archiveHabit} aria-label={`Archive ${habit.name}`}>
-          <X size={15} strokeWidth={1.8} />
-        </button>
-      </div>
-
-      <div>
-        <h2>{habit.name}</h2>
-        <p>{progressText}</p>
-      </div>
-
-      <span className={complete ? 'plain-button is-complete file-button' : 'plain-button file-button'}>
-        {complete ? 'Photo saved' : 'Take photo'}
-        <Camera size={17} strokeWidth={1.8} />
-      </span>
-      <input
-        accept="image/*"
-        capture="environment"
-        className="photo-input"
-        ref={inputRef}
-        type="file"
-        onClick={(event) => event.stopPropagation()}
-        onChange={(event) => onPhotoChange(habit, event)}
-      />
-    </article>
+        <input
+          accept="image/*"
+          capture="environment"
+          className="photo-input"
+          ref={inputRef}
+          type="file"
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => onPhotoChange(habit, event)}
+        />
+      </article>
+    </SwipeHabitCard>
   );
 }
 
@@ -848,6 +1142,10 @@ function activateOnKeyboard(event, action) {
 
 function formatShortDate(dateKey) {
   return new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function fileToCompressedDataUrl(file) {
@@ -988,7 +1286,7 @@ function BambooScene({ variant = 'splash' }) {
         const time = performance.now() * 0.001;
 
         group.rotation.y = Math.sin(time * 0.34) * 0.06;
-        group.position.y = Math.sin(time * 0.5) * 0.025 - 0.18;
+        group.position.y = Math.sin(time * 0.5) * 0.025 - 0.02;
 
         renderer.render(scene, camera);
       };
