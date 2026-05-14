@@ -24,12 +24,30 @@ services:
     depends_on:
       nenko-db:
         condition: service_healthy
+      nenko-ntfy:
+        condition: service_started
     environment:
       NODE_ENV: production
       PORT: 7319
       DATABASE_URL: postgres://nenko:nenko_dev_password@nenko-db:5432/nenko
+      NTFY_DEFAULT_SERVER_URL: http://nenko-ntfy
+      NTFY_DEFAULT_TOPIC: nenko-reminders
     ports:
       - "7319:7319"
 
+  nenko-ntfy:
+    image: binwiederhier/ntfy:v2.22
+    container_name: nenko-ntfy
+    restart: unless-stopped
+    command: serve
+    environment:
+      NTFY_BASE_URL: http://127.0.0.1:7721
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+    ports:
+      - "7721:80"
+    volumes:
+      - nenko-ntfy-cache:/var/cache/ntfy
+
 volumes:
   nenko-postgres-data:
+  nenko-ntfy-cache:

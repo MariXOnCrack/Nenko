@@ -10,13 +10,16 @@ const DEFAULT_HABITS = [
 
 export const DEFAULT_NTFY_SETTINGS = {
   enabled: false,
-  serverUrl: 'https://ntfy.sh',
-  topic: '',
+  serverUrl: process.env.NTFY_DEFAULT_SERVER_URL ?? 'https://ntfy.sh',
+  topic: process.env.NTFY_DEFAULT_TOPIC ?? '',
   title: 'Nenko',
   message: '{count} habit{plural} left today: {habits}',
   priority: 3,
   tags: 'seedling',
-  reminderTime: '20:00',
+  reminders: [
+    { id: 'morning', label: 'Morning', time: '06:00', enabled: true },
+    { id: 'evening', label: 'Evening', time: '17:00', enabled: true },
+  ],
   onlyIfIncomplete: true,
   authToken: '',
 };

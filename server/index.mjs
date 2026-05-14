@@ -9,7 +9,7 @@ const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
 const port = Number.parseInt(process.env.PORT ?? '7319', 10);
 const ntfySettingKey = 'ntfy';
-let lastNtfyReminderKey = '';
+const sentNtfyReminderKeys = new Set();
 
 const app = express();
 
@@ -182,7 +182,9 @@ app.listen(port, '0.0.0.0', () => {
 
 async function getNtfySettings() {
   const saved = await getAppSetting(ntfySettingKey, {});
-  return normalizeNtfySettings({ ...DEFAULT_NTFY_SETTINGS, ...saved }, { allowEmptyTopic: true });
+  const merged = { ...DEFAULT_NTFY_SETTINGS, ...saved };
+  if (!Array.isArray(saved.reminders) && saved.reminderTime) delete merged.reminders;
+  return normalizeNtfySettings(merged, { allowEmptyTopic: true });
 }
 
 function normalizeNtfySettings(input = {}, options = {}) {
@@ -195,7 +197,7 @@ function normalizeNtfySettings(input = {}, options = {}) {
     message: String(input.message ?? DEFAULT_NTFY_SETTINGS.message).trim(),
     priority: Number(input.priority ?? DEFAULT_NTFY_SETTINGS.priority),
     tags: String(input.tags ?? DEFAULT_NTFY_SETTINGS.tags).trim(),
-    reminderTime: String(input.reminderTime ?? DEFAULT_NTFY_SETTINGS.reminderTime).trim(),
+    reminders: normalizeNtfyReminders(input.reminders ?? input.reminderTime),
     onlyIfIncomplete: input.onlyIfIncomplete !== false,
     authToken: String(input.authToken ?? '').trim(),
   };
@@ -205,13 +207,6 @@ function normalizeNtfySettings(input = {}, options = {}) {
   if (!Number.isInteger(settings.priority) || settings.priority < 1 || settings.priority > 5) {
     throw badRequest('Priority must be between 1 and 5.');
   }
-  if (!/^\d{2}:\d{2}$/.test(settings.reminderTime)) {
-    throw badRequest('Reminder time must be HH:mm.');
-  }
-
-  const [hours, minutes] = settings.reminderTime.split(':').map(Number);
-  if (hours > 23 || minutes > 59) throw badRequest('Reminder time must be a valid time.');
-
   try {
     const url = new URL(settings.serverUrl);
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid protocol');
@@ -224,8 +219,48 @@ function normalizeNtfySettings(input = {}, options = {}) {
     throw badRequest('Topic can only use letters, numbers, dashes, and underscores.');
   }
   if (!settings.topic && (settings.enabled || !options.allowEmptyTopic)) throw badRequest('Topic is required.');
+  if (settings.enabled && !settings.reminders.some((reminder) => reminder.enabled)) {
+    throw badRequest('Add at least one enabled reminder.');
+  }
 
   return settings;
+}
+
+function normalizeNtfyReminders(input) {
+  const source = Array.isArray(input)
+    ? input
+    : typeof input === 'string'
+      ? [{ id: 'reminder', label: 'Reminder', time: input, enabled: true }]
+      : DEFAULT_NTFY_SETTINGS.reminders;
+
+  const ids = new Set();
+  return source.map((reminder, index) => {
+    const id = sanitizeReminderId(reminder.id, index, ids);
+    const label = String(reminder.label ?? `Reminder ${index + 1}`).trim().slice(0, 32) || `Reminder ${index + 1}`;
+    const time = String(reminder.time ?? '').trim();
+
+    validateReminderTime(time);
+    return {
+      id,
+      label,
+      time,
+      enabled: reminder.enabled !== false,
+    };
+  });
+}
+
+function sanitizeReminderId(value, index, ids) {
+  let id = String(value ?? '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 48);
+  if (!id) id = `reminder-${index + 1}`;
+  while (ids.has(id)) id = `${id}-${index + 1}`;
+  ids.add(id);
+  return id;
+}
+
+function validateReminderTime(time) {
+  if (!/^\d{2}:\d{2}$/.test(time)) throw badRequest('Reminder times must be HH:mm.');
+  const [hours, minutes] = time.split(':').map(Number);
+  if (hours > 23 || minutes > 59) throw badRequest('Reminder times must be valid times.');
 }
 
 function badRequest(message) {
@@ -285,10 +320,10 @@ async function sendDueNtfyReminder() {
   const now = new Date();
   const localDate = formatLocalDate(now);
   const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  if (localTime !== settings.reminderTime) return;
+  const dueReminders = settings.reminders.filter((reminder) => reminder.enabled && reminder.time === localTime);
+  if (!dueReminders.length) return;
 
-  const reminderKey = `${localDate}-${settings.reminderTime}`;
-  if (lastNtfyReminderKey === reminderKey) return;
+  pruneSentReminderKeys(localDate);
 
   const [habitsResult, entriesResult] = await Promise.all([
     pool.query('SELECT * FROM habits WHERE archived = false ORDER BY created_at ASC'),
@@ -298,23 +333,37 @@ async function sendDueNtfyReminder() {
   const entriesByHabit = new Map(entriesResult.rows.map((row) => [row.habit_id, mapEntry(row)]));
   const incomplete = habits.filter((habit) => !isEntryComplete(entriesByHabit.get(habit.id), habit.type));
 
-  if (settings.onlyIfIncomplete && incomplete.length === 0) {
-    lastNtfyReminderKey = reminderKey;
-    return;
-  }
-
   const names = incomplete.map((habit) => habit.name).join(', ');
-  const message = settings.message
+  for (const reminder of dueReminders) {
+    const reminderKey = `${localDate}-${reminder.id}-${reminder.time}`;
+    if (sentNtfyReminderKeys.has(reminderKey)) continue;
+
+    if (settings.onlyIfIncomplete && incomplete.length === 0) {
+      sentNtfyReminderKeys.add(reminderKey);
+      continue;
+    }
+
+    await publishNtfy(settings, {
+      title: renderNtfyTemplate(settings.title, incomplete, habits, names, reminder),
+      message: renderNtfyTemplate(settings.message, incomplete, habits, names, reminder),
+    });
+    sentNtfyReminderKeys.add(reminderKey);
+  }
+}
+
+function renderNtfyTemplate(template, incomplete, habits, names, reminder) {
+  return template
     .replaceAll('{count}', String(incomplete.length))
     .replaceAll('{total}', String(habits.length))
     .replaceAll('{habits}', names || 'all habits complete')
-    .replaceAll('{plural}', incomplete.length === 1 ? '' : 's');
+    .replaceAll('{plural}', incomplete.length === 1 ? '' : 's')
+    .replaceAll('{reminder}', reminder.label);
+}
 
-  await publishNtfy(settings, {
-    title: settings.title,
-    message,
-  });
-  lastNtfyReminderKey = reminderKey;
+function pruneSentReminderKeys(localDate) {
+  for (const key of sentNtfyReminderKeys) {
+    if (!key.startsWith(`${localDate}-`)) sentNtfyReminderKeys.delete(key);
+  }
 }
 
 function isEntryComplete(entry, type) {

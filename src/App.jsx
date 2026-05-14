@@ -64,7 +64,10 @@ const defaultNtfySettings = {
   message: '{count} habit{plural} left today: {habits}',
   priority: 3,
   tags: 'seedling',
-  reminderTime: '20:00',
+  reminders: [
+    { id: 'morning', label: 'Morning', time: '06:00', enabled: true },
+    { id: 'evening', label: 'Evening', time: '17:00', enabled: true },
+  ],
   onlyIfIncomplete: true,
   authToken: '',
 };
@@ -1085,20 +1088,59 @@ function SettingsTab({
 }
 
 function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
-  const [draft, setDraft] = useState({ ...defaultNtfySettings, ...(ntfySettings ?? {}) });
+  const [draft, setDraft] = useState(normalizeNtfyDraft(ntfySettings));
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setDraft({ ...defaultNtfySettings, ...(ntfySettings ?? {}) });
+    setDraft(normalizeNtfyDraft(ntfySettings));
   }, [ntfySettings]);
 
+  const reminders = normalizeReminderList(draft.reminders);
   const canSend = draft.serverUrl.trim() && draft.topic.trim() && !saving && !testing;
 
   function updateDraft(key, value) {
     setDraft((current) => ({ ...current, [key]: value }));
+    setStatus('');
+    setError('');
+  }
+
+  function updateReminder(id, key, value) {
+    setDraft((current) => ({
+      ...current,
+      reminders: normalizeReminderList(current.reminders).map((reminder) => (
+        reminder.id === id ? { ...reminder, [key]: value } : reminder
+      )),
+    }));
+    setStatus('');
+    setError('');
+  }
+
+  function addReminder() {
+    const nextReminder = {
+      id: `reminder-${Date.now()}`,
+      label: 'Reminder',
+      time: '17:00',
+      enabled: true,
+    };
+    setDraft((current) => ({
+      ...current,
+      reminders: [...normalizeReminderList(current.reminders), nextReminder],
+    }));
+    setStatus('');
+    setError('');
+  }
+
+  function removeReminder(id) {
+    setDraft((current) => {
+      const nextReminders = normalizeReminderList(current.reminders).filter((reminder) => reminder.id !== id);
+      return {
+        ...current,
+        reminders: nextReminders.length ? nextReminders : normalizeReminderList(defaultNtfySettings.reminders),
+      };
+    });
     setStatus('');
     setError('');
   }
@@ -1109,7 +1151,7 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
     setStatus('');
     setError('');
     try {
-      await onSave(draft);
+      await onSave({ ...draft, reminders });
       setStatus('Saved');
     } catch (saveError) {
       setError(saveError.message);
@@ -1123,7 +1165,7 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
     setStatus('');
     setError('');
     try {
-      await onTest(draft);
+      await onTest({ ...draft, reminders });
       setStatus('Test sent');
     } catch (testError) {
       setError(testError.message);
@@ -1147,8 +1189,8 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
 
       <label className="switch-row">
         <span>
-          <strong>Daily reminder</strong>
-          <small>Send one ntfy notification at the selected time.</small>
+          <strong>Reminder schedule</strong>
+          <small>Send ntfy notifications at the selected times.</small>
         </span>
         <input
           type="checkbox"
@@ -1175,16 +1217,6 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
             placeholder="nenko_private_topic"
           />
         </label>
-
-        <label className="field">
-          <span>Time</span>
-          <input
-            type="time"
-            value={draft.reminderTime}
-            onChange={(event) => updateDraft('reminderTime', event.target.value)}
-          />
-        </label>
-
         <label className="field">
           <span>Priority</span>
           <select
@@ -1198,6 +1230,47 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
             <option value={5}>Urgent</option>
           </select>
         </label>
+      </div>
+
+      <div className="reminder-list">
+        <div className="reminder-list-header">
+          <span>Reminder list</span>
+          <button className="icon-button" type="button" onClick={addReminder} aria-label="Add reminder">
+            <Plus size={17} strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {reminders.map((reminder, index) => (
+          <div className="reminder-row" key={reminder.id}>
+            <input
+              className="reminder-toggle"
+              type="checkbox"
+              checked={reminder.enabled}
+              onChange={(event) => updateReminder(reminder.id, 'enabled', event.target.checked)}
+              aria-label={`Enable reminder ${index + 1}`}
+            />
+            <label className="field">
+              <span>Name</span>
+              <input
+                value={reminder.label}
+                onChange={(event) => updateReminder(reminder.id, 'label', event.target.value)}
+                aria-label={`Reminder ${index + 1} name`}
+              />
+            </label>
+            <label className="field">
+              <span>Time</span>
+              <input
+                type="time"
+                value={reminder.time}
+                onChange={(event) => updateReminder(reminder.id, 'time', event.target.value)}
+                aria-label={`Reminder ${index + 1} time`}
+              />
+            </label>
+            <button className="icon-button" type="button" onClick={() => removeReminder(reminder.id)} aria-label={`Remove reminder ${index + 1}`}>
+              <Trash2 size={17} strokeWidth={1.8} />
+            </button>
+          </div>
+        ))}
       </div>
 
       <label className="field">
@@ -1266,6 +1339,31 @@ function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
       </div>
     </form>
   );
+}
+
+function normalizeNtfyDraft(settings) {
+  const mergedSettings = { ...defaultNtfySettings, ...(settings ?? {}) };
+  return {
+    ...mergedSettings,
+    reminders: normalizeReminderList(mergedSettings.reminders ?? mergedSettings.reminderTime),
+  };
+}
+
+function normalizeReminderList(reminders) {
+  if (Array.isArray(reminders) && reminders.length) {
+    return reminders.map((reminder, index) => ({
+      id: reminder.id || `reminder-${index + 1}`,
+      label: reminder.label ?? `Reminder ${index + 1}`,
+      time: reminder.time ?? '17:00',
+      enabled: reminder.enabled !== false,
+    }));
+  }
+
+  if (typeof reminders === 'string') {
+    return [{ id: 'reminder', label: 'Reminder', time: reminders, enabled: true }];
+  }
+
+  return defaultNtfySettings.reminders.map((reminder) => ({ ...reminder }));
 }
 
 function TabNav({ activeTab, onTabChange }) {
