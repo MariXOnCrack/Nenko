@@ -205,7 +205,7 @@ p {
 .habit-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .status-card {
@@ -227,10 +227,10 @@ p {
   bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, minmax(76px, 1fr));
-  width: min(calc(100vw - 28px), 470px);
-  min-height: 64px;
-  padding: 6px;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  width: min(calc(100vw - 28px), 276px);
+  min-height: 54px;
+  padding: 5px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: rgba(30, 29, 27, 0.78);
@@ -242,21 +242,12 @@ p {
 .tab-button {
   display: grid;
   min-width: 0;
-  min-height: 52px;
+  min-height: 44px;
   place-items: center;
-  gap: 2px;
   border: 0;
   border-radius: 999px;
   color: var(--ash);
   background: transparent;
-}
-
-.tab-button span {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .tab-button.is-active {
@@ -266,24 +257,42 @@ p {
 
 .habit-card {
   position: relative;
-  display: flex;
-  min-height: 174px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: clamp(14px, 2vw, 18px);
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 26px;
+  align-items: center;
+  column-gap: 9px;
+  min-height: 84px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(30, 29, 27, 0.72);
 }
 
 .habit-card h2 {
-  margin-bottom: 4px;
-  font-size: clamp(1.55rem, 2.2vw, 2.1rem);
+  margin-bottom: 2px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.28rem, 1.8vw, 1.72rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .habit-card p {
-  font-size: 0.92rem;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habit-card > div:not(.card-topline) {
+  min-width: 0;
+  grid-column: 2;
+}
+
+.habit-card > .plain-button {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .action-card {
@@ -333,7 +342,6 @@ p {
 }
 
 .photo-card {
-  grid-column: 1 / -1;
   gap: 8px;
 }
 
@@ -400,6 +408,83 @@ p {
   padding: clamp(16px, 3vw, 24px);
 }
 
+.gallery-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.gallery-folder {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 54px;
+  gap: 10px;
+  align-items: center;
+  min-height: 74px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(30, 29, 27, 0.72);
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.gallery-folder:hover,
+.gallery-folder:focus-visible {
+  border-color: var(--line-strong);
+  background: rgba(37, 36, 32, 0.82);
+}
+
+.gallery-folder:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.gallery-folder strong,
+.gallery-folder small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-folder strong {
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+.gallery-folder small {
+  color: var(--ash);
+  font-size: 0.74rem;
+}
+
+.folder-icon,
+.folder-preview {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(232, 230, 223, 0.04);
+}
+
+.folder-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.folder-preview {
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
+  color: var(--ash);
+}
+
+.folder-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .gallery-section {
   display: grid;
   gap: 12px;
@@ -410,6 +495,18 @@ p {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.gallery-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(232, 230, 223, 0.04);
 }
 
 .gallery-header h3 {
@@ -601,6 +698,7 @@ p {
 
 .card-topline {
   position: relative;
+  display: contents;
   gap: 8px;
   color: var(--ash);
   font-size: 0.7rem;
@@ -608,12 +706,17 @@ p {
   text-transform: uppercase;
 }
 
+.card-topline > span:not(.type-icon) {
+  display: none;
+}
+
 .remove-button {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   place-items: center;
-  margin-left: auto;
+  grid-column: 4;
+  margin-left: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--ash);
@@ -622,9 +725,10 @@ p {
 
 .type-icon {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   place-items: center;
+  grid-column: 1;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--ink);
@@ -634,77 +738,22 @@ p {
 .plain-button,
 .save-button {
   width: fit-content;
-  min-height: 38px;
+  min-height: 32px;
   justify-content: center;
-  gap: 8px;
-  padding: 0 14px;
+  gap: 7px;
+  padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   color: var(--ink);
   background: rgba(232, 230, 223, 0.055);
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .plain-button.is-complete {
   color: #111611;
   border-color: transparent;
   background: var(--ink);
-}
-
-.photo-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.photo-count {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--ink);
-}
-
-.compare-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.photo-frame {
-  position: relative;
-  min-height: 118px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #171715;
-}
-
-.photo-frame img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-frame > span {
-  position: absolute;
-  inset: 16px;
-  border: 1px dashed rgba(232, 230, 223, 0.16);
-  border-radius: 6px;
-}
-
-.photo-frame p {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  padding: 5px 9px;
-  border-radius: 999px;
-  color: var(--ink);
-  background: rgba(20, 20, 18, 0.72);
-  font-size: 0.78rem;
 }
 
 .photo-input {
@@ -879,32 +928,39 @@ p {
   }
 
   .tab-nav {
-    grid-template-columns: repeat(4, minmax(58px, 1fr));
-    min-height: 58px;
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+    width: min(calc(100vw - 24px), 252px);
+    min-height: 52px;
   }
 
   .tab-button {
-    min-height: 46px;
-  }
-
-  .tab-button span {
-    font-size: 0.66rem;
+    min-height: 42px;
   }
 
   .habit-card {
-    min-height: 136px;
-  }
-
-  .photo-frame {
-    min-height: 54px;
+    min-height: 78px;
   }
 
   .photo-card .plain-button {
-    min-height: 34px;
+    min-height: 30px;
   }
 
+  .gallery-folder-grid,
   .gallery-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gallery-folder {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .folder-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .folder-preview {
+    display: none;
   }
 
   .gallery-photo {

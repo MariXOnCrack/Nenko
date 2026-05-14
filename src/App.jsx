@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   BarChart3,
   Camera,
   Check,
   ChevronRight,
+  Folder,
   Hash,
   Home,
   Images,
@@ -433,6 +435,7 @@ function Metric({ label, value }) {
 }
 
 function GalleryTab({ entriesByHabit, habits }) {
+  const [selectedHabitId, setSelectedHabitId] = useState(null);
   const photoHabits = habits
     .filter((habit) => habit.type === 'photo')
     .map((habit) => ({
@@ -442,6 +445,7 @@ function GalleryTab({ entriesByHabit, habits }) {
         .sort((a, b) => a.date.localeCompare(b.date)),
     }));
   const totalPhotos = photoHabits.reduce((count, item) => count + item.entries.length, 0);
+  const selectedFolder = photoHabits.find((item) => item.habit.id === selectedHabitId);
 
   if (!photoHabits.length) {
     return (
@@ -455,18 +459,17 @@ function GalleryTab({ entriesByHabit, habits }) {
     );
   }
 
-  return (
-    <div className="gallery-tab tab-panel">
-      <section className="gallery-hero">
-        <div>
-          <p className="eyebrow">Gallery</p>
-          <h2>{totalPhotos ? `${totalPhotos} saved photo${totalPhotos === 1 ? '' : 's'}` : 'No photos yet'}</h2>
-        </div>
-      </section>
+  if (selectedFolder) {
+    const { entries, habit } = selectedFolder;
 
-      {photoHabits.map(({ entries, habit }) => (
-        <section className="gallery-section" key={habit.id}>
+    return (
+      <div className="gallery-tab tab-panel">
+        <section className="gallery-section">
           <div className="gallery-header">
+            <button className="gallery-back" type="button" onClick={() => setSelectedHabitId(null)} aria-label="Back to gallery folders">
+              <ArrowLeft size={18} strokeWidth={1.8} />
+              Folders
+            </button>
             <div>
               <h3>{habit.name}</h3>
               <p>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'} logged` : 'Waiting for day 1'}</p>
@@ -492,7 +495,35 @@ function GalleryTab({ entriesByHabit, habits }) {
             </div>
           )}
         </section>
-      ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="gallery-tab tab-panel">
+      <section className="gallery-hero">
+        <div>
+          <p className="eyebrow">Gallery</p>
+          <h2>{totalPhotos ? `${totalPhotos} saved photo${totalPhotos === 1 ? '' : 's'}` : 'No photos yet'}</h2>
+        </div>
+      </section>
+
+      <section className="gallery-folder-grid" aria-label="Comparator folders">
+        {photoHabits.map(({ entries, habit }) => (
+          <button className="gallery-folder" type="button" key={habit.id} onClick={() => setSelectedHabitId(habit.id)}>
+            <span className="folder-icon">
+              <Folder size={18} strokeWidth={1.8} />
+            </span>
+            <div>
+              <strong>{habit.name}</strong>
+              <small>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'}` : 'Empty'}</small>
+            </div>
+            <span className="folder-preview">
+              {entries.at(-1)?.photoData ? <img src={entries.at(-1).photoData} alt="" /> : <Camera size={18} strokeWidth={1.8} />}
+            </span>
+          </button>
+        ))}
+      </section>
     </div>
   );
 }
@@ -554,9 +585,10 @@ function TabNav({ activeTab, onTabChange }) {
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             aria-current={active ? 'page' : undefined}
+            aria-label={tab.label}
+            title={tab.label}
           >
             <Icon size={20} strokeWidth={1.8} />
-            <span>{tab.label}</span>
           </button>
         );
       })}
@@ -689,14 +721,14 @@ function AddHabitModal({ onClose, onSave }) {
 
 function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
   const inputRef = useRef(null);
+  const todayEntry = entries.find((entry) => entry.date === todayKey);
   const photoEntries = entries.filter((entry) => entry.photoData).sort((a, b) => a.date.localeCompare(b.date));
-  const firstPhoto = photoEntries[0];
-  const latestPhoto = photoEntries.at(-1);
-  const progressText = !photoEntries.length
-    ? 'No photo yet'
-    : photoEntries.length === 1
-      ? 'Day 1 started'
-      : `${photoEntries.length} photos logged`;
+  const complete = isEntryComplete(todayEntry, habit.type);
+  const progressText = complete
+    ? 'Photo saved today'
+    : photoEntries.length
+      ? `${photoEntries.length} in gallery`
+      : 'Tap to add day 1';
   const openFilePicker = () => inputRef.current?.click();
   const archiveHabit = (event) => {
     event.stopPropagation();
@@ -705,7 +737,7 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
 
   return (
     <article
-      className="habit-card photo-card action-card animated-card"
+      className={complete ? 'habit-card photo-card action-card animated-card is-complete-card' : 'habit-card photo-card action-card animated-card'}
       onClick={openFilePicker}
       onKeyDown={(event) => activateOnKeyboard(event, openFilePicker)}
       role="button"
@@ -721,25 +753,13 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
         </button>
       </div>
 
-      <div className="photo-heading">
-        <div>
-          <h2>{habit.name}</h2>
-          <p>{progressText}</p>
-        </div>
-        {photoEntries.length > 1 && (
-          <span className="photo-count" aria-label={`${photoEntries.length} photos`}>
-            {photoEntries.length}
-          </span>
-        )}
+      <div>
+        <h2>{habit.name}</h2>
+        <p>{progressText}</p>
       </div>
 
-      <div className="compare-grid">
-        <PhotoFrame image={firstPhoto?.photoData} label="Day 1" />
-        <PhotoFrame image={latestPhoto?.photoData} label="Today" />
-      </div>
-
-      <span className="plain-button file-button">
-        Add today&apos;s photo
+      <span className={complete ? 'plain-button is-complete file-button' : 'plain-button file-button'}>
+        {complete ? 'Photo saved' : 'Take photo'}
         <Camera size={17} strokeWidth={1.8} />
       </span>
       <input
@@ -752,15 +772,6 @@ function PhotoComparator({ entries, habit, onArchiveHabit, onPhotoChange }) {
         onChange={(event) => onPhotoChange(habit, event)}
       />
     </article>
-  );
-}
-
-function PhotoFrame({ image, label }) {
-  return (
-    <div className="photo-frame">
-      {image ? <img src={image} alt={`${label} progress`} /> : <span />}
-      <p>{label}</p>
-    </div>
   );
 }
 
