@@ -8,6 +8,19 @@ const DEFAULT_HABITS = [
   { name: 'Visual progress', type: 'photo', target: null },
 ];
 
+export const DEFAULT_NTFY_SETTINGS = {
+  enabled: false,
+  serverUrl: 'https://ntfy.sh',
+  topic: '',
+  title: 'Nenko',
+  message: '{count} habit{plural} left today: {habits}',
+  priority: 3,
+  tags: 'seedling',
+  reminderTime: '20:00',
+  onlyIfIncomplete: true,
+  authToken: '',
+};
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL ?? 'postgres://nenko:nenko_dev_password@127.0.0.1:55437/nenko',
   host: process.env.PGHOST,
@@ -46,6 +59,14 @@ export async function initDb() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key text PRIMARY KEY,
+      value jsonb NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM habits');
   if (rows[0].count === 0) {
     for (const habit of DEFAULT_HABITS) {
@@ -56,6 +77,25 @@ export async function initDb() {
       ]);
     }
   }
+}
+
+export async function getAppSetting(key, fallback = null) {
+  const { rows } = await pool.query('SELECT value FROM app_settings WHERE key = $1', [key]);
+  return rows[0]?.value ?? fallback;
+}
+
+export async function setAppSetting(key, value) {
+  const { rows } = await pool.query(
+    `
+      INSERT INTO app_settings (key, value)
+      VALUES ($1, $2)
+      ON CONFLICT (key)
+      DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+      RETURNING value
+    `,
+    [key, value],
+  );
+  return rows[0].value;
 }
 
 export function mapHabit(row) {

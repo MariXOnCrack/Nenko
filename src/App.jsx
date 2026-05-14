@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BarChart3,
+  Bell,
   Camera,
   Check,
   ChevronRight,
@@ -10,6 +11,7 @@ import {
   Images,
   Minus,
   Plus,
+  Send,
   Settings as SettingsIcon,
   Trash2,
   X,
@@ -54,6 +56,18 @@ const themeOptions = [
     swatch: '#79b5b0',
   },
 ];
+const defaultNtfySettings = {
+  enabled: false,
+  serverUrl: 'https://ntfy.sh',
+  topic: '',
+  title: 'Nenko',
+  message: '{count} habit{plural} left today: {habits}',
+  priority: 3,
+  tags: 'seedling',
+  reminderTime: '20:00',
+  onlyIfIncomplete: true,
+  authToken: '',
+};
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -67,6 +81,7 @@ function App() {
   const [addHabitOpen, setAddHabitOpen] = useState(false);
   const [deleteHabit, setDeleteHabit] = useState(null);
   const [deletingHabit, setDeletingHabit] = useState(false);
+  const [ntfySettings, setNtfySettings] = useState(defaultNtfySettings);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'forest';
     return window.localStorage.getItem('nenko-theme') ?? 'forest';
@@ -98,6 +113,7 @@ function App() {
       const state = await api('/api/state');
       setHabits(state.habits);
       setEntries(state.entries);
+      setNtfySettings({ ...defaultNtfySettings, ...(state.ntfySettings ?? {}) });
     } catch {
       setError('Database connection unavailable.');
     } finally {
@@ -178,6 +194,21 @@ function App() {
     setEntries((current) => current.filter((entry) => !photoIds.has(entry.habitId)));
   }
 
+  async function saveNtfySettings(nextSettings) {
+    const { ntfySettings: savedSettings } = await api('/api/settings/ntfy', {
+      method: 'PUT',
+      body: nextSettings,
+    });
+    setNtfySettings({ ...defaultNtfySettings, ...savedSettings });
+  }
+
+  async function sendTestNtfy(nextSettings) {
+    await api('/api/ntfy/test', {
+      method: 'POST',
+      body: nextSettings,
+    });
+  }
+
   async function confirmDeleteHabit() {
     if (!deleteHabit) return;
     setDeletingHabit(true);
@@ -205,9 +236,12 @@ function App() {
         onNumberHabit={setNumberHabit}
         onPhotoChange={addPhoto}
         onRefresh={refreshState}
+        onSaveNtfySettings={saveNtfySettings}
         onResetToday={resetToday}
+        onTestNtfy={sendTestNtfy}
         onThemeChange={setTheme}
         onToggleClock={toggleClock}
+        ntfySettings={ntfySettings}
         progressLog={progressLog}
         theme={theme}
       />
@@ -284,9 +318,12 @@ function HabitApp({
   onNumberHabit,
   onPhotoChange,
   onRefresh,
+  onSaveNtfySettings,
   onResetToday,
+  onTestNtfy,
   onThemeChange,
   onToggleClock,
+  ntfySettings,
   progressLog,
   theme,
 }) {
@@ -335,8 +372,11 @@ function HabitApp({
 
       {!error && !loading && activeTab === 'settings' && (
         <SettingsTab
+          ntfySettings={ntfySettings}
           onClearPhotos={onClearPhotos}
+          onSaveNtfySettings={onSaveNtfySettings}
           onResetToday={onResetToday}
+          onTestNtfy={onTestNtfy}
           onThemeChange={onThemeChange}
           photoCount={countPhotoEntries(entriesByHabit, habits)}
           theme={theme}
@@ -973,7 +1013,16 @@ function PhotoPickerModal({ entries, habit, selectedIndex, onClose, onSelect }) 
   );
 }
 
-function SettingsTab({ onClearPhotos, onResetToday, onThemeChange, photoCount, theme }) {
+function SettingsTab({
+  ntfySettings,
+  onClearPhotos,
+  onResetToday,
+  onSaveNtfySettings,
+  onTestNtfy,
+  onThemeChange,
+  photoCount,
+  theme,
+}) {
   return (
     <div className="settings-tab tab-panel">
       <section className="settings-card">
@@ -1001,6 +1050,12 @@ function SettingsTab({ onClearPhotos, onResetToday, onThemeChange, photoCount, t
         </div>
       </section>
 
+      <NtfySettingsCard
+        ntfySettings={ntfySettings}
+        onSave={onSaveNtfySettings}
+        onTest={onTestNtfy}
+      />
+
       <section className="settings-card">
         <div>
           <p className="eyebrow">Settings</p>
@@ -1026,6 +1081,190 @@ function SettingsTab({ onClearPhotos, onResetToday, onThemeChange, photoCount, t
         </button>
       </section>
     </div>
+  );
+}
+
+function NtfySettingsCard({ ntfySettings, onSave, onTest }) {
+  const [draft, setDraft] = useState({ ...defaultNtfySettings, ...(ntfySettings ?? {}) });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setDraft({ ...defaultNtfySettings, ...(ntfySettings ?? {}) });
+  }, [ntfySettings]);
+
+  const canSend = draft.serverUrl.trim() && draft.topic.trim() && !saving && !testing;
+
+  function updateDraft(key, value) {
+    setDraft((current) => ({ ...current, [key]: value }));
+    setStatus('');
+    setError('');
+  }
+
+  async function saveSettings(event) {
+    event.preventDefault();
+    setSaving(true);
+    setStatus('');
+    setError('');
+    try {
+      await onSave(draft);
+      setStatus('Saved');
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function testSettings() {
+    setTesting(true);
+    setStatus('');
+    setError('');
+    try {
+      await onTest(draft);
+      setStatus('Test sent');
+    } catch (testError) {
+      setError(testError.message);
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <form className="settings-card ntfy-card" onSubmit={saveSettings}>
+      <div className="settings-card-header">
+        <div>
+          <p className="eyebrow">Notifications</p>
+          <h2>ntfy reminders</h2>
+        </div>
+        <span className={draft.enabled ? 'ntfy-state is-on' : 'ntfy-state'}>
+          <Bell size={15} strokeWidth={1.8} />
+          {draft.enabled ? 'On' : 'Off'}
+        </span>
+      </div>
+
+      <label className="switch-row">
+        <span>
+          <strong>Daily reminder</strong>
+          <small>Send one ntfy notification at the selected time.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={draft.enabled}
+          onChange={(event) => updateDraft('enabled', event.target.checked)}
+        />
+      </label>
+
+      <div className="ntfy-grid">
+        <label className="field">
+          <span>Server</span>
+          <input
+            value={draft.serverUrl}
+            onChange={(event) => updateDraft('serverUrl', event.target.value)}
+            placeholder="https://ntfy.sh"
+          />
+        </label>
+
+        <label className="field">
+          <span>Topic</span>
+          <input
+            value={draft.topic}
+            onChange={(event) => updateDraft('topic', event.target.value)}
+            placeholder="nenko_private_topic"
+          />
+        </label>
+
+        <label className="field">
+          <span>Time</span>
+          <input
+            type="time"
+            value={draft.reminderTime}
+            onChange={(event) => updateDraft('reminderTime', event.target.value)}
+          />
+        </label>
+
+        <label className="field">
+          <span>Priority</span>
+          <select
+            value={draft.priority}
+            onChange={(event) => updateDraft('priority', Number(event.target.value))}
+          >
+            <option value={1}>Min</option>
+            <option value={2}>Low</option>
+            <option value={3}>Default</option>
+            <option value={4}>High</option>
+            <option value={5}>Urgent</option>
+          </select>
+        </label>
+      </div>
+
+      <label className="field">
+        <span>Title</span>
+        <input
+          value={draft.title}
+          onChange={(event) => updateDraft('title', event.target.value)}
+          placeholder="Nenko"
+        />
+      </label>
+
+      <label className="field">
+        <span>Message</span>
+        <textarea
+          rows={3}
+          value={draft.message}
+          onChange={(event) => updateDraft('message', event.target.value)}
+          placeholder="{count} habit{plural} left today: {habits}"
+        />
+      </label>
+
+      <div className="ntfy-grid">
+        <label className="field">
+          <span>Tags</span>
+          <input
+            value={draft.tags}
+            onChange={(event) => updateDraft('tags', event.target.value)}
+            placeholder="seedling,check"
+          />
+        </label>
+
+        <label className="field">
+          <span>Access token</span>
+          <input
+            type="password"
+            value={draft.authToken}
+            onChange={(event) => updateDraft('authToken', event.target.value)}
+            placeholder="Optional"
+          />
+        </label>
+      </div>
+
+      <label className="switch-row">
+        <span>
+          <strong>Only if unfinished</strong>
+          <small>Skip the reminder when every habit is done.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={draft.onlyIfIncomplete}
+          onChange={(event) => updateDraft('onlyIfIncomplete', event.target.checked)}
+        />
+      </label>
+
+      {(status || error) && <p className={error ? 'settings-feedback is-error' : 'settings-feedback'}>{error || status}</p>}
+
+      <div className="ntfy-actions">
+        <button className="secondary-button" type="button" disabled={!canSend} onClick={testSettings}>
+          <Send size={17} strokeWidth={1.8} />
+          {testing ? 'Sending...' : 'Send test'}
+        </button>
+        <button className="save-button" type="submit" disabled={saving || testing}>
+          {saving ? 'Saving...' : 'Save ntfy'}
+          <ChevronRight size={18} strokeWidth={1.8} />
+        </button>
+      </div>
+    </form>
   );
 }
 

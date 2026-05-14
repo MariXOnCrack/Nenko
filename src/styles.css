@@ -1117,6 +1117,93 @@ p {
   padding: clamp(18px, 3vw, 26px);
 }
 
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ntfy-card {
+  gap: 14px;
+}
+
+.ntfy-state {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ash);
+  background: var(--surface-soft);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.ntfy-state.is-on {
+  color: var(--accent-contrast);
+  border-color: transparent;
+  background: var(--accent);
+}
+
+.ntfy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.switch-row span {
+  display: grid;
+  gap: 4px;
+}
+
+.switch-row strong {
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 500;
+}
+
+.switch-row small {
+  color: var(--ash);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.switch-row input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.ntfy-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.settings-feedback {
+  color: var(--accent);
+  font-size: 0.82rem;
+}
+
+.settings-feedback.is-error {
+  color: var(--danger);
+}
+
 .settings-list {
   display: grid;
   overflow: hidden;
@@ -1459,7 +1546,9 @@ p {
   text-transform: uppercase;
 }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
@@ -1467,6 +1556,17 @@ p {
   color: var(--ink);
   background: var(--photo-bg);
   padding: 0 13px;
+}
+
+.field select {
+  appearance: none;
+}
+
+.field textarea {
+  min-height: 82px;
+  resize: vertical;
+  padding: 12px 13px;
+  line-height: 1.45;
 }
 
 .type-picker {
@@ -1549,6 +1649,16 @@ p {
   }
 
   .theme-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card-header,
+  .switch-row {
+    align-items: flex-start;
+  }
+
+  .ntfy-grid,
+  .ntfy-actions {
     grid-template-columns: 1fr;
   }
 
