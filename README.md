@@ -23,6 +23,18 @@ The app container serves the built React frontend and the API from the same orig
 
 Open the ntfy web UI at `http://127.0.0.1:7721`, subscribe to `nenko-reminders`, then customize the reminder list from Nenko Settings.
 
+### iPhone notifications
+
+For iPhone delivery from the bundled ntfy server, set `NTFY_PUBLIC_BASE_URL` to the exact URL your iPhone can open, then restart compose:
+
+```bash
+NTFY_PUBLIC_BASE_URL=http://YOUR-LAN-IP:7721 docker compose up --build
+```
+
+In the ntfy iOS app, set the default server to that exact same URL and subscribe to `nenko-reminders`. Do not use `127.0.0.1` on iPhone, because that points to the phone itself.
+
+The compose file sets `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh`, which ntfy requires for instant iOS push notifications on self-hosted servers.
+
 ## Local Development
 
 Start only the database with Docker, then run the API and Vite separately:
