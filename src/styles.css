@@ -115,6 +115,27 @@ button {
     var(--bg);
 }
 
+.splash-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(4rem, 12vw, 9.5rem);
+  letter-spacing: 0;
+  line-height: 0.9;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation: splashTitleIn 900ms ease 180ms forwards;
+}
+
+@keyframes splashTitleIn {
+  to {
+    opacity: 1;
+  }
+}
+
 .bamboo-stage {
   position: absolute;
   right: clamp(-120px, -2vw, -18px);
@@ -340,6 +361,9 @@ p {
 .swipe-card-surface {
   position: relative;
   z-index: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
   touch-action: pan-y;
   transition: transform 180ms ease;
 }

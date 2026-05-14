@@ -258,6 +258,7 @@ function SplashScreen({ isLeaving }) {
   return (
     <section className={`splash-screen ${isLeaving ? 'is-leaving' : ''}`} aria-label="Loading Nenko">
       <div className="splash-bg" />
+      <h1 className="splash-title">Nenko</h1>
       <BambooScene variant="splash" />
     </section>
   );
