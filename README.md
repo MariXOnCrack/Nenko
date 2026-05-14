@@ -25,15 +25,15 @@ Open the ntfy web UI at `http://127.0.0.1:7721`, subscribe to `nenko-reminders`,
 
 ### iPhone notifications
 
-For iPhone delivery from the bundled ntfy server, set `NTFY_PUBLIC_BASE_URL` to the exact URL your iPhone can open, then restart compose:
+For iPhone delivery from the bundled ntfy server, `NTFY_PUBLIC_BASE_URL` must be the exact reverse-proxied URL your iPhone can open. This repo defaults to your ntfy domain:
 
 ```bash
-NTFY_PUBLIC_BASE_URL=http://YOUR-LAN-IP:7721 docker compose up --build
+NTFY_PUBLIC_BASE_URL=https://ntfy.marix.lol docker compose up --build
 ```
 
-In the ntfy iOS app, set the default server to that exact same URL and subscribe to `nenko-reminders`. Do not use `127.0.0.1` on iPhone, because that points to the phone itself.
+In the ntfy iOS app, set the default server to `https://ntfy.marix.lol` and subscribe to `nenko-reminders`. Do not use `127.0.0.1` on iPhone, because that points to the phone itself.
 
-The compose file sets `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh`, which ntfy requires for instant iOS push notifications on self-hosted servers.
+The compose file sets `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh`, which ntfy requires for instant iOS push notifications on self-hosted servers. It also sets `NTFY_BEHIND_PROXY=true`, which ntfy recommends when running behind a reverse proxy.
 
 ## Local Development
 

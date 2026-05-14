@@ -41,8 +41,9 @@ services:
     restart: unless-stopped
     command: serve
     environment:
-      NTFY_BASE_URL: ${NTFY_PUBLIC_BASE_URL:-http://127.0.0.1:7721}
+      NTFY_BASE_URL: ${NTFY_PUBLIC_BASE_URL:-https://ntfy.marix.lol}
       NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+      NTFY_BEHIND_PROXY: true
       NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
     ports:
       - "7721:80"
