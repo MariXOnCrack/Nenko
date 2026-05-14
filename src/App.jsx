@@ -1052,7 +1052,7 @@ function TabNav({ activeTab, onTabChange }) {
             aria-label={tab.label}
             title={tab.label}
           >
-            <Icon size={20} strokeWidth={1.8} />
+            <Icon size={22} strokeWidth={1.8} />
           </button>
         );
       })}
@@ -1132,8 +1132,8 @@ function AddHabitModal({ onClose, onSave }) {
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <form className="modal-panel pop-panel" role="dialog" aria-modal="true" aria-labelledby="add-modal-title" onSubmit={submit}>
+    <div className="modal-backdrop text-modal-backdrop" role="presentation">
+      <form className="modal-panel text-modal-panel pop-panel" role="dialog" aria-modal="true" aria-labelledby="add-modal-title" onSubmit={submit}>
         <div className="modal-header">
           <div>
             <p className="eyebrow">New habit</p>
