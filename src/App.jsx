@@ -5,7 +5,6 @@ import {
   Camera,
   Check,
   ChevronRight,
-  Folder,
   Hash,
   Home,
   Images,
@@ -401,7 +400,13 @@ function HabitTile({ entries, habit, onDeleteHabitRequest, onNumberHabit, onPhot
   return (
     <SwipeHabitCard habit={habit} onDeleteRequest={onDeleteHabitRequest}>
       <article
-        className={complete ? 'habit-card action-card animated-card is-complete-card' : 'habit-card action-card animated-card'}
+        className={[
+          'habit-card action-card animated-card',
+          complete ? 'is-complete-card' : '',
+          isClock && complete ? 'is-clocked-card' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={runPrimaryAction}
         onKeyDown={(event) => activateOnKeyboard(event, runPrimaryAction)}
         role="button"
@@ -631,16 +636,13 @@ function GalleryTab({ entriesByHabit, habits }) {
       <section className="gallery-folder-grid" aria-label="Comparator folders">
         {photoHabits.map(({ entries, habit }) => (
           <button className="gallery-folder" type="button" key={habit.id} onClick={() => setSelectedHabitId(habit.id)}>
-            <span className="folder-icon">
-              <Folder size={18} strokeWidth={1.8} />
+            <span className="folder-cover">
+              {entries.at(-1)?.photoData ? <img src={entries.at(-1).photoData} alt="" /> : <Camera size={18} strokeWidth={1.8} />}
             </span>
             <div>
               <strong>{habit.name}</strong>
               <small>{entries.length ? `${entries.length} photo${entries.length === 1 ? '' : 's'}` : 'Empty'}</small>
             </div>
-            <span className="folder-preview">
-              {entries.at(-1)?.photoData ? <img src={entries.at(-1).photoData} alt="" /> : <Camera size={18} strokeWidth={1.8} />}
-            </span>
           </button>
         ))}
       </section>
@@ -848,8 +850,14 @@ function SettingsTab({ onClearPhotos, onResetToday, onThemeChange, photoCount, t
 }
 
 function TabNav({ activeTab, onTabChange }) {
+  const activeIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.id === activeTab),
+  );
+
   return (
-    <nav className="tab-nav" aria-label="Primary navigation">
+    <nav className="tab-nav" style={{ '--active-index': activeIndex }} aria-label="Primary navigation">
+      <span className="tab-indicator" aria-hidden="true" />
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const active = activeTab === tab.id;
