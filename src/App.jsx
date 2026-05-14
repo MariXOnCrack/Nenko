@@ -206,12 +206,12 @@ function App() {
         onPhotoChange={addPhoto}
         onRefresh={refreshState}
         onResetToday={resetToday}
-        onTabChange={setActiveTab}
         onThemeChange={setTheme}
         onToggleClock={toggleClock}
         progressLog={progressLog}
         theme={theme}
       />
+      <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       {showSplash && <SplashScreen isLeaving={splashLeaving} />}
 
@@ -285,7 +285,6 @@ function HabitApp({
   onPhotoChange,
   onRefresh,
   onResetToday,
-  onTabChange,
   onThemeChange,
   onToggleClock,
   progressLog,
@@ -343,8 +342,6 @@ function HabitApp({
           theme={theme}
         />
       )}
-
-      <TabNav activeTab={activeTab} onTabChange={onTabChange} />
     </section>
   );
 }
